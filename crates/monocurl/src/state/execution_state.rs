@@ -113,7 +113,7 @@ impl ExecutionState {
             self.parameter_state = params
                 .params
                 .iter()
-                .map(|entry| (entry.target.clone(), entry.value.clone()))
+                .map(|param| (param.target.clone(), param.value.clone()))
                 .collect();
         }
         self.parameters = snapshot.parameters;

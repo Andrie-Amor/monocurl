@@ -50,13 +50,15 @@ pub enum Instruction {
     PushEmptyList,
 
     // register tos as a leader; name_index into the string pool for debugging
-    ConvertScene {
+    ConvertParam {
         name_index: u32,
     },
     ConvertMesh {
         name_index: u32,
     },
-    ConvertVar,
+    ConvertVar {
+        allow_stateful: bool,
+    },
     // sync all leader followers to their leader values; emitted at end of init section
     SyncAllLeaders,
 
@@ -72,6 +74,10 @@ pub enum Instruction {
     },
     PushLvalue {
         force_ephemeral: bool,
+        stack_delta: i32,
+    },
+
+    PushStateful {
         stack_delta: i32,
     },
 
@@ -94,10 +100,12 @@ pub enum Instruction {
     MakeOperator,
 
     OperatorInvoke {
+        stateful: bool,
         labeled: bool,
         num_args: u32,
     },
     LambdaInvoke {
+        stateful: bool,
         labeled: bool,
         num_args: u32,
     },

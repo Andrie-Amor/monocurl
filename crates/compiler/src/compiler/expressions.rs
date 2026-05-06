@@ -64,12 +64,12 @@ impl Compiler {
             IdentifierReference::Reference(_) => {
                 if !matches!(
                     sym.var_type,
-                    VariableType::Reference | VariableType::Mesh | VariableType::Scene
+                    VariableType::Reference | VariableType::Param | VariableType::Mesh
                 ) {
                     self.error(
                         span.clone(),
                         format!(
-                            "cannot reference '{}' as it is not a mesh or scene variable",
+                            "cannot reference '{}' as it is not a mesh or param variable",
                             name
                         ),
                     );
@@ -101,6 +101,12 @@ impl Compiler {
                 } else {
                     self.emit_symbol_copy(&sym, span.clone());
                 }
+            }
+            IdentifierReference::StatefulReference(_) => {
+                self.emit_push(
+                    Instruction::PushStateful { stack_delta: delta },
+                    span.clone(),
+                );
             }
         }
     }
@@ -176,7 +182,12 @@ impl Compiler {
             return;
         }
         // needed to subscript lvalue wise
-        self.emit(Instruction::ConvertVar, span.clone());
+        self.emit(
+            Instruction::ConvertVar {
+                allow_stateful: false,
+            },
+            span.clone(),
+        );
         let map_pos = self.stack_depth() - 1;
         for (key, val) in entries {
             let d = self.stack_delta(map_pos);
@@ -311,7 +322,7 @@ impl Compiler {
 
 impl Compiler {
     fn reference_argument_message() -> &'static str {
-        "reference arguments must be explicit &scene, &mesh, &reference values, or list literals of references"
+        "reference arguments must be explicit &param, &mesh, &reference values, or list literals of references"
     }
 
     fn is_reference_argument_literal(expr: &Expression) -> bool {
@@ -411,6 +422,8 @@ impl Compiler {
         }
 
         let labeled = l.arguments.1.iter().any(|(lbl, _)| lbl.is_some());
+        let stateful =
+            is_stateful(&l.lambda.1) || l.arguments.1.iter().any(|(_, a)| is_stateful(&a.1));
         let num_args = l.arguments.1.len() as u32;
 
         if let Some(args) = self.lambda_arg_info_for_expr(&l.lambda.1) {
@@ -439,7 +452,11 @@ impl Compiler {
             }
         }
         self.emit(
-            Instruction::LambdaInvoke { labeled, num_args },
+            Instruction::LambdaInvoke {
+                stateful,
+                labeled,
+                num_args,
+            },
             span.clone(),
         );
         self.dec_stack(num_args as usize); // goes from +(args+1) to +1
@@ -447,6 +464,9 @@ impl Compiler {
 
     pub(super) fn compile_operator_invoke(&mut self, o: &OperatorInvocation, _span: &Span8) {
         let labeled = o.arguments.1.iter().any(|(lbl, _)| lbl.is_some());
+        let stateful = is_stateful(&o.operator.1)
+            || is_stateful(&o.operand.1)
+            || o.arguments.1.iter().any(|(_, a)| is_stateful(&a.1));
         let num_args = o.arguments.1.len() as u32;
 
         // span covering just `operator{args}`, excluding the operand
@@ -487,7 +507,11 @@ impl Compiler {
             }
         }
         self.emit(
-            Instruction::OperatorInvoke { labeled, num_args },
+            Instruction::OperatorInvoke {
+                stateful,
+                labeled,
+                num_args,
+            },
             invoke_span.clone(),
         );
         self.dec_stack(num_args as usize + 1);

@@ -261,10 +261,10 @@ fn test_exec_assignment_chain_uses_assigned_value() {
 // -- default value free-variable restrictions --
 
 #[test]
-fn test_default_lvalue_ref_mesh_is_error() {
-    // &y in a default is always banned, even when y is a mesh leader
+fn test_default_lvalue_ref_param_is_error() {
+    // &y in a default is always banned, even when y is param
     let r = run("
-        mesh y = 4
+        param y = 4
         let gamma = |x = &y| x
         let result = gamma()
     ");
@@ -283,13 +283,13 @@ fn test_default_lvalue_ref_let_is_error() {
 
 #[test]
 fn test_default_references_let_is_error() {
-    // plain let variable in a default is not mesh or scene
+    // plain let variable in a default is not mesh or param
     let r = run("
         let base = 10
         let f = |x = &base| x
         let result = f()
     ");
-    r.assert_error("mesh or scene");
+    r.assert_error("mesh or param");
 }
 
 #[test]
@@ -299,14 +299,14 @@ fn test_default_references_var_is_error() {
         let f = |x = &count| x
         let result = f()
     ");
-    r.assert_error("mesh or scene");
+    r.assert_error("mesh or param");
 }
 
 #[test]
-fn test_default_references_scene_is_ok() {
+fn test_default_references_param_is_ok() {
     let r = run("
-        background = 3
-        let f = |x = background| x * 2
+        param scale = 3
+        let f = |x = scale| x * 2
         let result = f()
     ");
     r.assert_int(6);
@@ -368,7 +368,7 @@ fn test_exec_lambda_returns_lambda() {
 #[test]
 fn test_exec_reference_arg_rejects_lambda_returned_reference() {
     let r = run("
-        mesh x = 1
+        param x = 1
         let passthrough = |a| a
         let set = |&y| {
             y = 7
@@ -383,7 +383,7 @@ fn test_exec_reference_arg_rejects_lambda_returned_reference() {
 #[test]
 fn test_exec_reference_arg_rejects_captured_returned_reference() {
     let r = run("
-        mesh x = 1
+        param x = 1
         let passthrough = |a| {
             let inner = || a
             return inner()

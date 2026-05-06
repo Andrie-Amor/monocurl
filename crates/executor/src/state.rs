@@ -174,10 +174,18 @@ pub struct LeaderEntry {
     pub kind: LeaderKind,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone)]
+pub struct ActiveParam {
+    pub name: String,
+    pub leader_cell: VRc,
+    pub leader_value: HeapKey,
+    pub follower_value: HeapKey,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum LeaderKind {
     Mesh,
-    Scene,
+    Param,
 }
 
 pub const MAX_CALL_DEPTH: usize = 2000;
@@ -197,8 +205,9 @@ pub struct ExecutionState {
     pub primitive_anims: Vec<BakedPrimitiveAnim>,
 
     pub leaders: Vec<LeaderEntry>,
+    pub active_params: Vec<ActiveParam>,
 
-    /// strong VRc refs for ephemeral lvalue captures
+    /// strong VRc refs for stateful args; keeps them alive across the section
     pub ephemeral_pool: Vec<VRc>,
 
     pub errors: Vec<RuntimeError>,
@@ -229,6 +238,7 @@ impl ExecutionState {
             execution_heads: BTreeSet::new(),
             primitive_anims: Vec::new(),
             leaders: Vec::new(),
+            active_params: Vec::new(),
             ephemeral_pool: Vec::new(),
             errors: Vec::new(),
             transcript: Transcript::default(),
@@ -370,7 +380,7 @@ impl ExecutionState {
         stack.push(Value::Lvalue(vrc));
     }
 
-    /// promote TOS to a leader-follower variable.
+    /// promote TOS to a leader-follower variable (mesh/param).
     pub fn promote_to_leader(&mut self, stack_idx: usize, kind: LeaderKind, name: String) {
         let stack = self.stack_mut(stack_idx);
         let init_val = stack.pop().elide_lvalue().elide_leader();
@@ -378,7 +388,7 @@ impl ExecutionState {
         let leader_key = heap_alloc(init_val.clone());
         let follower_init = match kind {
             LeaderKind::Mesh => Value::List(List::new()),
-            LeaderKind::Scene => init_val,
+            LeaderKind::Param => init_val,
         };
         let follower_key = heap_alloc(follower_init);
 
@@ -405,6 +415,15 @@ impl ExecutionState {
             kind,
         });
 
+        if kind == LeaderKind::Param {
+            self.active_params.push(ActiveParam {
+                name,
+                leader_cell: cell_vrc.clone(),
+                leader_value: leader_key,
+                follower_value: follower_key,
+            });
+        }
+
         self.stack_mut(stack_idx).push(Value::Lvalue(cell_vrc));
     }
 
@@ -412,7 +431,8 @@ impl ExecutionState {
         for entry in &self.leaders {
             let cell_val = with_heap(|h| h.get(entry.leader_cell.key()).clone());
             if let Value::Leader(leader) = cell_val {
-                let value = with_heap(|h| h.get(leader.leader_rc.key()).clone());
+                let value =
+                    with_heap(|h| h.get(leader.leader_rc.key()).clone()).to_follower_stateful();
                 heap_replace(leader.follower_rc.key(), value);
                 // update last_modified_stack and follower_version in the slot
                 crate::heap::with_heap_mut(|h| {
@@ -447,7 +467,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn promote_to_scene_tracks_leader_metadata() {
+    fn promote_to_param_tracks_leader_metadata_and_active_params() {
         let mut state = ExecutionState::new();
         state
             .stack_mut(ExecutionState::ROOT_STACK_IDX)
@@ -455,13 +475,26 @@ mod tests {
 
         state.promote_to_leader(
             ExecutionState::ROOT_STACK_IDX,
-            LeaderKind::Scene,
-            "camera".into(),
+            LeaderKind::Param,
+            "speed".into(),
         );
 
         assert_eq!(state.leaders.len(), 1);
-        assert_eq!(state.leaders[0].name, "camera");
-        assert_eq!(state.leaders[0].kind, LeaderKind::Scene);
+        assert_eq!(state.active_params.len(), 1);
+        assert_eq!(state.leaders[0].name, "speed");
+        assert_eq!(state.active_params[0].name, "speed");
+        assert_eq!(
+            state.leaders[0].leader_cell.key(),
+            state.active_params[0].leader_cell.key()
+        );
+        assert_eq!(
+            state.leaders[0].leader_value,
+            state.active_params[0].leader_value
+        );
+        assert_eq!(
+            state.leaders[0].follower_value,
+            state.active_params[0].follower_value
+        );
     }
 
     #[test]
@@ -473,8 +506,8 @@ mod tests {
 
         state.promote_to_leader(
             ExecutionState::ROOT_STACK_IDX,
-            LeaderKind::Scene,
-            "camera".into(),
+            LeaderKind::Param,
+            "speed".into(),
         );
 
         let leader_key = state.leaders[0].leader_value;

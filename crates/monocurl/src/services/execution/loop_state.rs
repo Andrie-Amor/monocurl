@@ -367,8 +367,8 @@ fn apply_pending_parameter_updates(executor: &mut Executor, shared: &SharedRunti
             continue;
         };
         let result = match &target {
-            PresentationUpdateTarget::Scene { leader_index } => {
-                executor.update_scene_leader_by_index(*leader_index, value)
+            PresentationUpdateTarget::Param { leader_index } => {
+                executor.update_parameter_by_leader_index(*leader_index, value)
             }
             PresentationUpdateTarget::MeshAttribute { leader_index, path } => {
                 executor.update_mesh_attribute(*leader_index, path, value)
@@ -761,7 +761,7 @@ mod tests {
         let runtime = RuntimeState::new();
         let message = ExecutionMessage::UpdateParameters {
             updates: HashMap::from([(
-                PresentationUpdateTarget::Scene { leader_index: 0 },
+                PresentationUpdateTarget::Param { leader_index: 0 },
                 ParameterValue::Float(2.0),
             )]),
         };

@@ -659,7 +659,8 @@ impl Executor {
             };
 
             let follower = with_heap(|h| h.get(leader.follower_rc.key()).clone());
-            let destination = with_heap(|h| h.get(leader.leader_rc.key()).clone());
+            let destination =
+                with_heap(|h| h.get(leader.leader_rc.key()).clone()).to_follower_stateful();
             let (embedded_start, embedded_end, embedded_state) = if let Some(embed) = &embed {
                 self.eval_embed_value(embed, parent_stack_idx, follower, destination.clone())
                     .await?
@@ -908,7 +909,7 @@ fn sync_leader_to_follower(leader_cell: &VRc) {
     let Value::Leader(leader) = cell_val else {
         return;
     };
-    let value = with_heap(|h| h.get(leader.leader_rc.key()).clone());
+    let value = with_heap(|h| h.get(leader.leader_rc.key()).clone()).to_follower_stateful();
     heap_replace(leader.follower_rc.key(), value);
     with_heap_mut(|h| {
         if let Value::Leader(l) = &mut *h.get_mut(cell_key) {

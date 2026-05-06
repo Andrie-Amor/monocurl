@@ -408,7 +408,7 @@ mod tests {
             .push(Value::Integer(10));
         executor.state.promote_to_leader(
             ExecutionState::ROOT_STACK_IDX,
-            LeaderKind::Scene,
+            LeaderKind::Param,
             "speed".into(),
         );
         executor.save_cache();

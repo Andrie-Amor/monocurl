@@ -9,6 +9,7 @@ pub mod lambda;
 pub mod leader;
 pub mod primitive_anim;
 pub mod rc_cached;
+pub mod stateful;
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -25,6 +26,7 @@ use self::{
     lambda::{Lambda, Operator},
     leader::Leader,
     primitive_anim::PrimitiveAnim,
+    stateful::Stateful,
 };
 
 /// (section_index, instruction_offset)
@@ -58,6 +60,7 @@ pub enum Value {
     Map(Map),
     List(List),
 
+    Stateful(Stateful),
     Leader(Box<Leader>),
 
     InvokedOperator(InvokedOperator),

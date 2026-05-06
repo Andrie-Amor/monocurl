@@ -41,7 +41,7 @@ impl ParameterValue {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PresentationUpdateTarget {
-    Scene {
+    Param {
         leader_index: usize,
     },
     MeshAttribute {

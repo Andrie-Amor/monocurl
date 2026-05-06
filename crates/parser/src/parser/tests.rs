@@ -319,6 +319,15 @@ mod test {
     }
 
     #[test]
+    fn test_stateful_reference() {
+        let result = parse_expr_test("$state_var");
+        let expected = Expression::IdentifierReference(IdentifierReference::StatefulReference(
+            "state_var".to_string(),
+        ));
+        assert_eq!(result.1, expected);
+    }
+
+    #[test]
     fn test_star_identifier_syntax_is_removed() {
         error_expr_test("*ptr");
     }

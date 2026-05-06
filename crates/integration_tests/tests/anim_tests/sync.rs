@@ -7,25 +7,24 @@ use geo::mesh::Mesh;
 fn test_set_syncs_only_explicit_candidates() {
     let r = run_anim_with_stdlib(
         "
-        mesh a = 1
-        mesh b = 2
-        play Set([&a, &b])
+        param a = 1
+        param b = 2
         a = 10
         b = 20
         play Set([&a])
     ",
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0].assert_target_int(10).assert_current_int(10);
-    params[1].assert_target_int(20).assert_current_int(2);
+    let params = r.param_leaders();
+    params[2].assert_target_int(10).assert_current_int(10);
+    params[3].assert_target_int(20).assert_current_int(2);
 }
 
 #[test]
 fn test_set_has_zero_duration() {
     let r = run_anim_with_stdlib(
         "
-        mesh x = 0
+        param x = 0
         x = 10
         play Set([&x])
     ",
@@ -38,8 +37,7 @@ fn test_set_slide_can_seek_back_before_zero_after_finishing() {
     let (mut executor, user_slide_count) = match build_anim_executor(
         &[(
             "
-            mesh x = 0
-            play Set([&x])
+            param x = 0
             x = 10
             play Set([&x])
         ",
@@ -67,7 +65,9 @@ fn test_set_slide_can_seek_back_before_zero_after_finishing() {
 
     let r = collect_anim_result(executor, user_slide_count, vec![]);
     r.assert_ok().assert_slide_time_approx(0.0, 0.0);
-    r.mesh_leaders()[0].assert_target_int(0);
+    r.param_leaders()[2]
+        .assert_target_int(10)
+        .assert_current_int(0);
 }
 
 #[test]
@@ -159,7 +159,7 @@ fn test_camera_lerp_uses_native_spherical_up_interpolation() {
     r.assert_ok();
 
     let camera = r
-        .scene_leaders()
+        .param_leaders()
         .into_iter()
         .find(|leader| camera_kind(&leader.current).as_deref() == Some("camera"))
         .expect("expected camera leader");
@@ -885,16 +885,15 @@ fn test_rearrangement_scene_final_slide_seek_scan_stays_stable() {
 fn test_lerp_auto_deduces_detached_followers() {
     let r = run_anim_with_stdlib_at(
         "
-        mesh x = 0
-        play Set([&x])
+        param x = 0
         x = 10
         play Lerp(2)
     ",
         1.0,
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0]
+    let params = r.param_leaders();
+    params[2]
         .assert_target_int(10)
         .assert_current_float(5.0, 1e-9);
 }
@@ -903,9 +902,8 @@ fn test_lerp_auto_deduces_detached_followers() {
 fn test_lerp_flattens_nested_candidate_tree() {
     let r = run_anim_with_stdlib_at(
         "
-        mesh a = 0
-        mesh b = 2
-        play Set([&a, &b])
+        param a = 0
+        param b = 2
         a = 10
         b = 20
         play Lerp(2, [[&a], []])
@@ -913,27 +911,26 @@ fn test_lerp_flattens_nested_candidate_tree() {
         1.0,
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0]
+    let params = r.param_leaders();
+    params[2]
         .assert_target_int(10)
         .assert_current_float(5.0, 1e-9);
-    params[1].assert_target_int(20).assert_current_int(2);
+    params[3].assert_target_int(20).assert_current_int(2);
 }
 
 #[test]
 fn test_lerp_rate_lambda_shapes_progression() {
     let r = run_anim_with_stdlib_at(
         "
-        mesh x = 0
-        play Set([&x])
+        param x = 0
         x = 10
         play Lerp(2, [&x], |t| t * t)
     ",
         1.0,
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0]
+    let params = r.param_leaders();
+    params[2]
         .assert_target_int(10)
         .assert_current_float(2.5, 1e-9);
 }
@@ -942,16 +939,15 @@ fn test_lerp_rate_lambda_shapes_progression() {
 fn test_lerp_custom_lerp_lambda_shapes_value_interpolation() {
     let r = run_anim_with_stdlib_at(
         "
-        mesh x = 0
-        play Set([&x])
+        param x = 0
         x = 10
         play PrimitiveAnim(2, [&x], nil, |a, b, state, t| a + (b - a) * t * t, linear)
     ",
         1.0,
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0]
+    let params = r.param_leaders();
+    params[2]
         .assert_target_int(10)
         .assert_current_float(2.5, 1e-9);
 }
@@ -2046,9 +2042,8 @@ fn test_fade_anim_materializes_live_operator_meshes() {
 fn test_parallel_anim_blocks_auto_target_only_own_stack_lineage() {
     let r = run_anim_with_stdlib_at(
         "
-        mesh a = 0
-        mesh b = 0
-        play Set([&a, &b])
+        param a = 0
+        param b = 0
         let a_anim = anim {
             a = 4
             play Lerp()
@@ -2062,20 +2057,19 @@ fn test_parallel_anim_blocks_auto_target_only_own_stack_lineage() {
         0.5,
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0]
+    let params = r.param_leaders();
+    params[2]
         .assert_target_int(4)
         .assert_current_float(2.0, 1e-9);
-    params[1].assert_target_int(4).assert_current_int(4);
+    params[3].assert_target_int(4).assert_current_int(4);
 }
 
 #[test]
 fn test_parallel_anim_blocks_with_shared_root_changes_leave_later_implicit_anim_empty() {
     let r = run_anim_with_stdlib_at(
         "
-        mesh a = 0
-        mesh b = 0
-        play Set([&a, &b])
+        param a = 0
+        param b = 0
 
         a = 4
         b = 4
@@ -2091,11 +2085,11 @@ fn test_parallel_anim_blocks_with_shared_root_changes_leave_later_implicit_anim_
         0.5,
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0]
+    let params = r.param_leaders();
+    params[2]
         .assert_target_int(4)
         .assert_current_float(2.0, 1e-9);
-    params[1]
+    params[3]
         .assert_target_int(4)
         .assert_current_float(2.0, 1e-9);
 }
@@ -2104,9 +2098,8 @@ fn test_parallel_anim_blocks_with_shared_root_changes_leave_later_implicit_anim_
 fn test_anim_block_auto_targets_ancestor_and_local_changes() {
     let r = run_anim_with_stdlib_at(
         "
-        mesh a = 0
-        mesh b = 0
-        play Set([&a, &b])
+        param a = 0
+        param b = 0
 
         a = 4
 
@@ -2120,11 +2113,11 @@ fn test_anim_block_auto_targets_ancestor_and_local_changes() {
         1.0,
     );
     r.assert_ok();
-    let params = r.mesh_leaders();
-    params[0]
+    let params = r.param_leaders();
+    params[2]
         .assert_target_int(4)
         .assert_current_float(2.0, 1e-9);
-    params[1]
+    params[3]
         .assert_target_int(6)
         .assert_current_float(3.0, 1e-9);
 }
@@ -2133,8 +2126,7 @@ fn test_anim_block_auto_targets_ancestor_and_local_changes() {
 fn test_concurrent_primitive_animation_lock_error() {
     let r = run_anim_with_stdlib(
         "
-        mesh x = 0
-        play Set([&x])
+        param x = 0
         x = 10
         play [Lerp(1, [&x]), Set([&x])]
     ",

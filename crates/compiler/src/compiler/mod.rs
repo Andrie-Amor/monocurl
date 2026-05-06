@@ -2,6 +2,7 @@ mod closures;
 mod cursor;
 mod expressions;
 mod free_vars;
+mod stateful;
 mod statements;
 #[cfg(test)]
 mod tests;
@@ -24,6 +25,7 @@ use parser::ast::{
     SpanTagged, Statement, Subscript, UnaryOperatorType, UnaryPreOperator,
     VariableType as AstVariableType, While,
 };
+use stateful::is_stateful;
 use stdlib::registry::registry;
 use structs::{
     rope::{Attribute, RLEData, Rope},
@@ -53,6 +55,7 @@ pub enum CursorIdentifierType {
     Let,
     Var,
     Mesh,
+    Param,
 }
 
 // autocomplete suggetion effectively
@@ -86,8 +89,8 @@ pub enum VariableType {
     Let,
     Var,
     Reference,
+    Param,
     Mesh,
-    Scene,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -185,7 +188,9 @@ struct CompilerFrame {
 
 fn ident_ref_name(ir: &IdentifierReference) -> &str {
     match ir {
-        IdentifierReference::Value(n) | IdentifierReference::Reference(n) => n,
+        IdentifierReference::Value(n)
+        | IdentifierReference::StatefulReference(n)
+        | IdentifierReference::Reference(n) => n,
     }
 }
 
@@ -378,8 +383,8 @@ impl Compiler {
                 0..0,
             );
             let name_index = self.intern_string(var);
-            self.emit(Instruction::ConvertScene { name_index }, 0..0);
-            self.define_symbol(var, VariableType::Scene, SymbolFunctionInfo::None, false);
+            self.emit(Instruction::ConvertParam { name_index }, 0..0);
+            self.define_symbol(var, VariableType::Param, SymbolFunctionInfo::None, false);
         }
 
         self.emit(Instruction::EndOfExecutionHead, 0..0);
