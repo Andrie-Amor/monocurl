@@ -28,16 +28,20 @@ cp -R "$ROOT/assets" "$APP/assets"
 find "$APP/assets" -name .DS_Store -delete
 cp "$ROOT/assets/AppIcon.appiconset/monocurl-512.png" \
     "$APP/share/icons/hicolor/512x512/apps/monocurl.png"
+cp "$ROOT/bundling/linux/com.enigmadux.monocurl.desktop" \
+    "$APP/share/applications/com.enigmadux.monocurl.desktop"
 
 copy_runtime_lib() {
     local name="$1"
-    local source="$SYSTEM_LIB_DIR/$name"
+    local source
     local dest="$APP/lib/$name"
 
-    [[ -f "$source" ]] || { echo "[error] runtime library not found: $source" >&2; exit 1; }
+    source="$(ldconfig -p | awk -v name="$name" '$1 == name { print $NF; exit }')"
+    [[ -n "$source" && -f "$source" ]] || { echo "[error] runtime library not found: $name" >&2; exit 1; }
     cp -L "$source" "$dest"
 }
 
+# bundled sonames, like the macos homebrew dylib list
 copy_runtime_lib libicudata.so.70
 copy_runtime_lib libicui18n.so.70
 copy_runtime_lib libicuuc.so.70
@@ -54,18 +58,6 @@ if command -v patchelf >/dev/null 2>&1; then
 else
     echo "[warn] patchelf not found; bundled Linux libraries may not be discovered at runtime" >&2
 fi
-
-cat > "$APP/share/applications/com.enigmadux.monocurl.desktop" <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=Monocurl
-Comment=Mathematical animation editor
-Exec=monocurl %F
-Icon=monocurl
-Terminal=false
-Categories=Education;
-MimeType=text/x-monocurl-scene;text/x-monocurl-library;
-EOF
 
 TARBALL="$ROOT/dist/linux/Monocurl-$VERSION-$TARGET.tar.gz"
 tar -czf "$TARBALL" -C "$stage" monocurl.app

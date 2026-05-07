@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Monocurl
+Comment=Mathematical animation editor
+Exec=monocurl %F
+Icon=monocurl
+Terminal=false
+Categories=Education;
+MimeType=text/x-monocurl-scene;text/x-monocurl-library;
