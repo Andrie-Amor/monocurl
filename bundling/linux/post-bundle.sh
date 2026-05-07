@@ -49,6 +49,17 @@ copy_runtime_lib libfreetype.so.6
 copy_runtime_lib libgraphite2.so.3
 copy_runtime_lib libpng16.so.16
 copy_runtime_lib libfontconfig.so.1
+copy_runtime_lib libexpat.so.1
+copy_runtime_lib libbrotlidec.so.1
+copy_runtime_lib libbrotlicommon.so.1
+copy_runtime_lib libxcb.so.1
+copy_runtime_lib libxcb-xkb.so.1
+copy_runtime_lib libxkbcommon.so.0
+copy_runtime_lib libxkbcommon-x11.so.0
+copy_runtime_lib libXau.so.6
+copy_runtime_lib libXdmcp.so.6
+copy_runtime_lib libbsd.so.0
+copy_runtime_lib libmd.so.0
 
 if command -v patchelf >/dev/null 2>&1; then
     patchelf --set-rpath '$ORIGIN/../lib' "$APP/bin/monocurl"

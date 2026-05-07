@@ -96,6 +96,12 @@ done
 # ---- sign -------------------------------------------------------------------
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
     ENTITLEMENTS="${CODESIGN_ENTITLEMENTS:-$ROOT/bundling/macos/Monocurl.entitlements}"
+    if ! security find-identity -v -p codesigning | grep -F "$CODESIGN_IDENTITY" >/dev/null; then
+        echo "[error] codesign identity not found in keychain: $CODESIGN_IDENTITY" >&2
+        echo "[error] set MACOS_CERTIFICATE_P12 and MACOS_CERTIFICATE_PASSWORD, or clear CODESIGN_IDENTITY" >&2
+        security find-identity -v -p codesigning >&2 || true
+        exit 1
+    fi
     xattr -cr "$APP"
     find "$FWDIR" -name '*.dylib' -print0 \
         | xargs -0 -I{} codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" {}
@@ -110,7 +116,7 @@ fi
 
 # ---- DMG --------------------------------------------------------------------
 mkdir -p "$ROOT/dist/macos"
-DMG="$ROOT/dist/macos/Monocurl-$VERSION.dmg"
+DMG="$ROOT/dist/macos/Monocurl-$VERSION-$TARGET.dmg"
 stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
 ditto --noextattr --norsrc "$APP" "$stage/Monocurl.app"; ln -s /Applications "$stage/Applications"
 

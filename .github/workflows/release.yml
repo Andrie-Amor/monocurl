@@ -9,14 +9,17 @@ on:
 jobs:
   build-macos:
     name: macOS (${{ matrix.target }})
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - target: aarch64-apple-darwin
             artifact: macos-arm64
-          # - target: x86_64-apple-darwin
-          #   artifact: macos-x86_64
+            runner: macos-15
+          - target: x86_64-apple-darwin
+            artifact: macos-x86_64
+            runner: macos-15-intel
 
     steps:
       - uses: actions/checkout@v4
@@ -71,6 +74,38 @@ jobs:
         run: cargo bundle --package monocurl --release --target ${{ matrix.target }}
         env:
           MONOCURL_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Import macOS signing certificate
+        run: |
+          if [[ -z "${MACOS_CERTIFICATE_P12:-}" || -z "${MACOS_CERTIFICATE_PASSWORD:-}" ]]; then
+            echo "Skipping certificate import; MACOS_CERTIFICATE_P12 or MACOS_CERTIFICATE_PASSWORD is not set."
+            exit 0
+          fi
+
+          CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/monocurl-signing.keychain-db"
+
+          printf '%s' "$MACOS_CERTIFICATE_P12" | base64 -D > "$CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Post-bundle
         run: bash bundling/macos/post-bundle.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
@@ -186,6 +221,20 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('.github/workflows/release.yml') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ matrix.target }}-
+
+      - name: Cache cargo-bundle
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-bundle.exe
+          key: cargo-bundle-${{ runner.os }}-0.10.0
+
       - name: Install build dependencies
         shell: pwsh
         run: |
@@ -198,17 +247,20 @@ jobs:
             throw "vcpkg.exe not found at $vcpkgRoot"
           }
 
+          $vcpkgCache = "$env:GITHUB_WORKSPACE\vcpkg-binary-cache"
+          New-Item -ItemType Directory -Force $vcpkgCache | Out-Null
+          $env:VCPKG_BINARY_SOURCES = "clear;files,$vcpkgCache,readwrite"
+
           & "$vcpkgRoot\vcpkg.exe" install `
             --triplet x64-windows-static-md `
             icu `
             freetype `
             graphite2 `
             libpng `
-            fontconfig `
-            openssl
+            fontconfig
 
           $installed = & "$vcpkgRoot\vcpkg.exe" list --triplet x64-windows-static-md
-          foreach ($package in @("icu", "freetype", "graphite2", "libpng", "fontconfig", "openssl")) {
+          foreach ($package in @("icu", "freetype", "graphite2", "libpng", "fontconfig")) {
             if (-not ($installed -match "^$package`:")) {
               throw "vcpkg package $package was not installed for x64-windows-static-md"
             }
@@ -217,9 +269,11 @@ jobs:
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=x64-windows-static-md" >> $env:GITHUB_ENV
           "TECTONIC_DEP_BACKEND=vcpkg" >> $env:GITHUB_ENV
-          "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
 
-          cargo install cargo-bundle --locked
+          if (-not (Get-Command cargo-bundle -ErrorAction SilentlyContinue)) {
+            cargo install cargo-bundle --locked --version 0.10.0
+          }
+          cargo bundle --version
 
       - name: Derive version
         id: version
