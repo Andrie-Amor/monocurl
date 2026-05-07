@@ -31,10 +31,15 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          brew install icu4c freetype graphite2 libpng
+          brew install pkg-config icu4c freetype graphite2 libpng
           cargo install cargo-bundle --locked
-          # icu4c is compile-only (statically linked); PKG_CONFIG_PATH lets tectonic find it
-          echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig" >> $GITHUB_ENV
+          {
+            echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix freetype)/lib/pkgconfig:$(brew --prefix graphite2)/lib/pkgconfig:$(brew --prefix libpng)/lib/pkgconfig"
+            echo "CFLAGS=-Wno-int-conversion"
+            echo "CXXFLAGS=-std=c++17"
+            echo "MACOSX_DEPLOYMENT_TARGET=11.0"
+          } >> $GITHUB_ENV
+          pkg-config --modversion graphite2 freetype2 libpng icu-uc
 
       - name: Derive version
         id: version
@@ -44,6 +49,11 @@ jobs:
           else
             echo "version=0.0.0-dev.$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Apply bundle version
+        run: perl -0pi -e 's/^version = "[^"]+"/version = "$ENV{MONOCURL_VERSION}"/m' crates/monocurl/Cargo.toml
+        env:
+          MONOCURL_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Bundle
         run: cargo bundle --package monocurl --release --target ${{ matrix.target }}
@@ -95,16 +105,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            libfreetype6-dev \
+            libgraphite2-dev \
+            libpng-dev \
             libvulkan-dev \
+            libx11-dev \
             libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev \
             libxkbcommon-dev libxkbcommon-x11-dev \
             libwayland-dev \
             libfontconfig1-dev \
             libssl-dev \
             libicu-dev \
-            pkg-config \
-            fakeroot dpkg
-          cargo install cargo-bundle --locked
+            pkg-config
+          pkg-config --modversion graphite2 freetype2 libpng icu-uc fontconfig openssl
 
       - name: Derive version
         id: version
@@ -115,12 +128,17 @@ jobs:
             echo "version=0.0.0-dev.$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           fi
 
-      - name: Bundle
-        run: cargo bundle --package monocurl --release --target ${{ matrix.target }}
+      - name: Apply bundle version
+        run: perl -0pi -e 's/^version = "[^"]+"/version = "$ENV{MONOCURL_VERSION}"/m' crates/monocurl/Cargo.toml
         env:
           MONOCURL_VERSION: ${{ steps.version.outputs.version }}
 
-      - name: Post-bundle
+      - name: Build
+        run: cargo build --package monocurl --release --target ${{ matrix.target }}
+        env:
+          MONOCURL_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Bundle
         run: bash bundling/linux/post-bundle.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
 
       - name: Upload artifact
@@ -155,8 +173,32 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Install cargo-bundle
-        run: cargo install cargo-bundle --locked
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          $vcpkgRoot = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $vcpkgRoot) {
+            $vcpkgRoot = "C:\vcpkg"
+          }
+
+          if (-not (Test-Path "$vcpkgRoot\vcpkg.exe")) {
+            throw "vcpkg.exe not found at $vcpkgRoot"
+          }
+
+          & "$vcpkgRoot\vcpkg.exe" install `
+            --triplet x64-windows-static-md `
+            icu `
+            freetype `
+            graphite2 `
+            libpng `
+            openssl
+
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKGRS_TRIPLET=x64-windows-static-md" >> $env:GITHUB_ENV
+          "TECTONIC_DEP_BACKEND=vcpkg" >> $env:GITHUB_ENV
+          "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+
+          cargo install cargo-bundle --locked
 
       - name: Derive version
         id: version
@@ -167,6 +209,12 @@ jobs:
           else
             echo "version=0.0.0-dev.$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Apply bundle version
+        shell: bash
+        run: perl -0pi -e 's/^version = "[^"]+"/version = "$ENV{MONOCURL_VERSION}"/m' crates/monocurl/Cargo.toml
+        env:
+          MONOCURL_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Bundle
         run: cargo bundle --package monocurl --release --target ${{ matrix.target }}

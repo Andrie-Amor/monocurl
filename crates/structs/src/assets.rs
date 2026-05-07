@@ -25,6 +25,16 @@ impl Assets {
             if candidate.exists() {
                 return candidate;
             }
+
+            #[cfg(not(target_os = "macos"))]
+            if exe_dir.file_name().is_some_and(|name| name == "bin")
+                && let Some(prefix) = exe_dir.parent()
+            {
+                let candidate = prefix.join("assets");
+                if candidate.exists() {
+                    return candidate;
+                }
+            }
         }
 
         PathBuf::from("assets")
