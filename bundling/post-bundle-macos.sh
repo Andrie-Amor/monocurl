@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # post-bundle-macos.sh <version> <target>
-# Run after: cargo bundle --release --target <target>
-# Handles the parts cargo-bundle doesn't: assets, ICU dylibs, signing, DMG, notarization.
+# Run after: cargo bundle --package monocurl --release --target <target>
+# Handles the parts cargo-bundle doesn't: assets, dylibs, signing, DMG, notarization.
 #
 # Signing (all optional — omit for ad-hoc signing):
 #   CODESIGN_IDENTITY               developer id cert identity
@@ -25,24 +25,38 @@ FWDIR="$APP/Contents/Frameworks"
 # ---- assets -----------------------------------------------------------------
 cp -R "$ROOT/assets" "$APP/Contents/Resources/"
 
-# ---- ICU4C dylibs (tectonic's unicode dependency) ---------------------------
-ICU="$(brew --prefix icu4c)/lib"
+# ---- dylibs -----------------------------------------------------------------
+# non-system dylibs required by tectonic's XeTeX engine (Homebrew-installed)
 mkdir -p "$FWDIR"
 
-for src in "$ICU"/libicu{uc,i18n,data}.*.dylib; do
-    [[ -f "$src" ]] || continue
-    name="$(basename "$src")"
-    cp "$src" "$FWDIR/$name" && chmod u+w "$FWDIR/$name"
-    codesign --remove-signature "$FWDIR/$name" 2>/dev/null || true
-    install_name_tool -id "@loader_path/$name" "$FWDIR/$name"
-    install_name_tool -change "$src" "@executable_path/../Frameworks/$name" "$EXE"
-done
+SRCS=()
+FNAMES=()
 
-# fix cross-references between ICU libs
-for dylib in "$FWDIR"/libicu*.dylib; do
-    for src in "$ICU"/libicu{uc,i18n,data}.*.dylib; do
+bundle_dylib() {
+    local name="$1" libdir="$2"
+    for src in "$libdir/$name".*.dylib; do
         [[ -f "$src" ]] || continue
-        install_name_tool -change "$src" "@loader_path/$(basename "$src")" "$dylib" 2>/dev/null || true
+        local fname
+        fname="$(basename "$src")"
+        cp "$src" "$FWDIR/$fname" && chmod u+w "$FWDIR/$fname"
+        codesign --remove-signature "$FWDIR/$fname" 2>/dev/null || true
+        install_name_tool -id "@loader_path/$fname" "$FWDIR/$fname"
+        install_name_tool -change "$src" "@executable_path/../Frameworks/$fname" "$EXE" 2>/dev/null || true
+        SRCS+=("$src")
+        FNAMES+=("$fname")
+    done
+}
+
+bundle_dylib libicudata  "$(brew --prefix icu4c)/lib"
+bundle_dylib libicuuc    "$(brew --prefix icu4c)/lib"
+bundle_dylib libfreetype "$(brew --prefix freetype)/lib"
+bundle_dylib libgraphite2 "$(brew --prefix graphite2)/lib"
+bundle_dylib libpng16    "$(brew --prefix libpng)/lib"
+
+# fix cross-references between bundled dylibs
+for dylib in "$FWDIR"/*.dylib; do
+    for i in "${!SRCS[@]}"; do
+        install_name_tool -change "${SRCS[$i]}" "@loader_path/${FNAMES[$i]}" "$dylib" 2>/dev/null || true
     done
 done
 

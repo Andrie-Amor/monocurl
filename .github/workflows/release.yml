@@ -32,7 +32,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          brew install icu4c
+          brew install icu4c freetype graphite2 libpng
           cargo install cargo-bundle --locked
           echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig" >> $GITHUB_ENV
 
