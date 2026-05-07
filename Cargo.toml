@@ -79,5 +79,8 @@ structs = { path = "crates/structs" }
 monocurl = { path = "crates/monocurl" }
 ui_cli_shared = { path = "crates/ui_cli_shared" }
 
+[patch.crates-io]
+blade-graphics = { path = "vendor/blade-graphics-0.7.1" }
+
 [profile.release]
 lto = true
