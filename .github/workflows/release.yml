@@ -269,6 +269,8 @@ jobs:
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=x64-windows-static-md" >> $env:GITHUB_ENV
           "TECTONIC_DEP_BACKEND=vcpkg" >> $env:GITHUB_ENV
+          "CXXFLAGS=/std:c++17" >> $env:GITHUB_ENV
+          "CXXFLAGS_x86_64_pc_windows_msvc=/std:c++17" >> $env:GITHUB_ENV
 
           if (-not (Get-Command cargo-bundle -ErrorAction SilentlyContinue)) {
             cargo install cargo-bundle --locked --version 0.10.0
