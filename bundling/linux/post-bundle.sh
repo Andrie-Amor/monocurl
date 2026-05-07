@@ -30,29 +30,27 @@ cp "$ROOT/assets/AppIcon.appiconset/monocurl-512.png" \
     "$APP/share/icons/hicolor/512x512/apps/monocurl.png"
 
 copy_runtime_lib() {
-    local lib="$1"
-    local name
-    name="$(basename "$lib")"
+    local name="$1"
+    local source="$SYSTEM_LIB_DIR/$name"
+    local dest="$APP/lib/$name"
 
-    case "$name" in
-        libicudata.so.* | libicui18n.so.* | libicuuc.so.* | \
-        libfreetype.so.* | libgraphite2.so.* | libpng16.so.* | \
-        libfontconfig.so.* | libharfbuzz*.so.*)
-            cp -L "$lib" "$APP/lib/$name"
-            ;;
-    esac
+    [[ -f "$source" ]] || { echo "[error] runtime library not found: $source" >&2; exit 1; }
+    cp -L "$source" "$dest"
 }
 
-if command -v ldd >/dev/null 2>&1; then
-    while IFS= read -r lib; do
-        [[ -f "$lib" ]] && copy_runtime_lib "$lib"
-    done < <(ldd "$BINARY" | sed -n 's/.*=> \(\/[^ ]*\).*/\1/p')
-else
-    echo "[warn] ldd not found; skipping Linux shared-library bundling" >&2
-fi
+copy_runtime_lib libicudata.so.70
+copy_runtime_lib libicui18n.so.70
+copy_runtime_lib libicuuc.so.70
+copy_runtime_lib libfreetype.so.6
+copy_runtime_lib libgraphite2.so.3
+copy_runtime_lib libpng16.so.16
+copy_runtime_lib libfontconfig.so.1
 
 if command -v patchelf >/dev/null 2>&1; then
     patchelf --set-rpath '$ORIGIN/../lib' "$APP/bin/monocurl"
+    for lib in "$APP/lib"/*.so*; do
+        [[ -f "$lib" ]] && patchelf --set-rpath '$ORIGIN' "$lib"
+    done
 else
     echo "[warn] patchelf not found; bundled Linux libraries may not be discovered at runtime" >&2
 fi

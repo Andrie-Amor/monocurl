@@ -9,11 +9,9 @@ identifier = "com.enigmadux.monocurl"
 icon = [
     "assets/AppIcon.appiconset/monocurl-16.png",
     "assets/AppIcon.appiconset/monocurl-32.png",
-    "assets/AppIcon.appiconset/monocurl-64.png",
     "assets/AppIcon.appiconset/monocurl-128.png",
     "assets/AppIcon.appiconset/monocurl-256.png",
     "assets/AppIcon.appiconset/monocurl-512.png",
-    "assets/AppIcon.appiconset/monocurl-1024.png",
 ]
 resources = ["assets"]
 category = "public.app-category.education"
