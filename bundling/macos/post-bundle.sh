@@ -26,32 +26,28 @@ FWDIR="$APP/Contents/Frameworks"
 cp -R "$ROOT/assets" "$APP/Contents/Resources/"
 
 # ---- dylibs -----------------------------------------------------------------
-# non-system dylibs required by tectonic's XeTeX engine (Homebrew-installed)
-mkdir -p "$FWDIR"
+# Homebrew dylibs the binary links against (verified via otool -L).
+# Update names here if a major-version bump changes the soname.
+rm -rf "$FWDIR" && mkdir -p "$FWDIR"
 
 SRCS=()
 FNAMES=()
 
 bundle_dylib() {
-    local name="$1" libdir="$2"
-    for src in "$libdir/$name".*.dylib; do
-        [[ -f "$src" ]] || continue
-        local fname
-        fname="$(basename "$src")"
-        cp "$src" "$FWDIR/$fname" && chmod u+w "$FWDIR/$fname"
-        codesign --remove-signature "$FWDIR/$fname" 2>/dev/null || true
-        install_name_tool -id "@loader_path/$fname" "$FWDIR/$fname"
-        install_name_tool -change "$src" "@executable_path/../Frameworks/$fname" "$EXE" 2>/dev/null || true
-        SRCS+=("$src")
-        FNAMES+=("$fname")
-    done
+    local src="$1"
+    local fname; fname="$(basename "$src")"
+    [[ -f "$src" ]] || { echo "[warn] dylib not found: $src" >&2; return; }
+    cp "$src" "$FWDIR/$fname" && chmod u+w "$FWDIR/$fname"
+    codesign --remove-signature "$FWDIR/$fname" 2>/dev/null || true
+    install_name_tool -id "@loader_path/$fname" "$FWDIR/$fname"
+    install_name_tool -change "$src" "@executable_path/../Frameworks/$fname" "$EXE" 2>/dev/null || true
+    SRCS+=("$src")
+    FNAMES+=("$fname")
 }
 
-bundle_dylib libicudata  "$(brew --prefix icu4c)/lib"
-bundle_dylib libicuuc    "$(brew --prefix icu4c)/lib"
-bundle_dylib libfreetype "$(brew --prefix freetype)/lib"
-bundle_dylib libgraphite2 "$(brew --prefix graphite2)/lib"
-bundle_dylib libpng16    "$(brew --prefix libpng)/lib"
+bundle_dylib "$(brew --prefix graphite2)/lib/libgraphite2.3.dylib"
+bundle_dylib "$(brew --prefix freetype)/lib/libfreetype.6.dylib"
+bundle_dylib "$(brew --prefix libpng)/lib/libpng16.16.dylib"
 
 # fix cross-references between bundled dylibs
 for dylib in "$FWDIR"/*.dylib; do
