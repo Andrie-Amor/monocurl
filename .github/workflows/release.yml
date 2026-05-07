@@ -33,8 +33,20 @@ jobs:
         run: |
           brew install pkg-config icu4c freetype graphite2 libpng
           cargo install cargo-bundle --locked
+
+          ICU_PREFIX="$(brew --prefix icu4c 2>/dev/null || true)"
+          if [[ -z "$ICU_PREFIX" || ! -d "$ICU_PREFIX/lib/pkgconfig" ]]; then
+            ICU_PREFIX="$(find "$(brew --prefix)/opt" -maxdepth 1 -name 'icu4c*' -print | sort | tail -n 1)"
+          fi
+          if [[ -z "$ICU_PREFIX" || ! -d "$ICU_PREFIX/lib/pkgconfig" ]]; then
+            echo "could not find Homebrew icu4c pkg-config directory" >&2
+            exit 1
+          fi
+
+          PKG_CONFIG_PATH="$ICU_PREFIX/lib/pkgconfig:$(brew --prefix freetype)/lib/pkgconfig:$(brew --prefix graphite2)/lib/pkgconfig:$(brew --prefix libpng)/lib/pkgconfig"
+          export PKG_CONFIG_PATH
           {
-            echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix freetype)/lib/pkgconfig:$(brew --prefix graphite2)/lib/pkgconfig:$(brew --prefix libpng)/lib/pkgconfig"
+            echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
             echo "CFLAGS=-Wno-int-conversion"
             echo "CXXFLAGS=-std=c++17"
             echo "MACOSX_DEPLOYMENT_TARGET=11.0"
