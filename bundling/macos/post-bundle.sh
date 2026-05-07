@@ -62,7 +62,7 @@ done
 
 # ---- sign -------------------------------------------------------------------
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
-    ENTITLEMENTS="${CODESIGN_ENTITLEMENTS:-$ROOT/bundling/Monocurl.entitlements}"
+    ENTITLEMENTS="${CODESIGN_ENTITLEMENTS:-$ROOT/bundling/macos/Monocurl.entitlements}"
     xattr -cr "$APP"
     find "$FWDIR" -name '*.dylib' -print0 \
         | xargs -0 -I{} codesign --force --timestamp --options runtime --sign "$CODESIGN_IDENTITY" {}

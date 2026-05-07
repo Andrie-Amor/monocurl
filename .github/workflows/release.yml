@@ -51,10 +51,10 @@ jobs:
           MONOCURL_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Post-bundle
-        run: bash bundling/post-bundle-macos.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
+        run: bash bundling/macos/post-bundle.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
         env:
           CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
-          CODESIGN_ENTITLEMENTS: bundling/Monocurl.entitlements
+          CODESIGN_ENTITLEMENTS: bundling/macos/Monocurl.entitlements
           APPLE_NOTARY_APPLE_ID: ${{ secrets.APPLE_NOTARY_APPLE_ID }}
           APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
           APPLE_NOTARY_TEAM_ID: ${{ secrets.APPLE_NOTARY_TEAM_ID }}
@@ -79,7 +79,7 @@ jobs:
   #     - uses: actions/checkout@v4
   #     - uses: dtolnay/rust-toolchain@stable
   #     - run: cargo bundle --package monocurl --release --target x86_64-pc-windows-msvc
-  #     - run: bash bundling/post-bundle-windows.sh ...
+  #     - run: bash bundling/windows/post-bundle.sh ...
   #
   # build-linux:
   #   runs-on: ubuntu-22.04
@@ -87,4 +87,4 @@ jobs:
   #     - uses: actions/checkout@v4
   #     - uses: dtolnay/rust-toolchain@stable
   #     - run: cargo bundle --package monocurl --release --target x86_64-unknown-linux-gnu
-  #     - run: bash bundling/post-bundle-linux.sh ...
+  #     - run: bash bundling/linux/post-bundle.sh ...
