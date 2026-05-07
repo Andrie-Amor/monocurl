@@ -3,7 +3,8 @@
 .DS_Store
 target
 dist/
-bundling/
+bundling/**/__pycache__/
+bundling/**/*.pyc
 assets/bin/tectonic
 assets/bin/tectonic.exe
 assets/tectonic/bundle/
