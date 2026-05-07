@@ -128,6 +128,7 @@ jobs:
             libfontconfig1-dev \
             libssl-dev \
             libicu-dev \
+            patchelf \
             pkg-config
           pkg-config --modversion graphite2 freetype2 libpng icu-uc fontconfig openssl
 
@@ -203,7 +204,15 @@ jobs:
             freetype `
             graphite2 `
             libpng `
+            fontconfig `
             openssl
+
+          $installed = & "$vcpkgRoot\vcpkg.exe" list --triplet x64-windows-static-md
+          foreach ($package in @("icu", "freetype", "graphite2", "libpng", "fontconfig", "openssl")) {
+            if (-not ($installed -match "^$package`:")) {
+              throw "vcpkg package $package was not installed for x64-windows-static-md"
+            }
+          }
 
           "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
           "VCPKGRS_TRIPLET=x64-windows-static-md" >> $env:GITHUB_ENV
