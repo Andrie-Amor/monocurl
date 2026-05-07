@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# post-bundle-macos.sh <version> <target>
+# post-bundle.sh <version> <target>
 # Run after: cargo bundle --package monocurl --release --target <target>
 # Handles the parts cargo-bundle doesn't: assets, dylibs, signing, DMG, notarization.
 #
@@ -17,13 +17,50 @@ VERSION="${1:?usage: $0 <version> <target>}"
 TARGET="${2:?usage: $0 <version> <target>}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APP="$ROOT/target/$TARGET/release/bundle/osx/Monocurl.app"
-EXE="$APP/Contents/MacOS/Monocurl"
 FWDIR="$APP/Contents/Frameworks"
 
 [[ -d "$APP" ]] || { echo "[error] app bundle not found: $APP" >&2; exit 1; }
+EXE_NAME="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP/Contents/Info.plist")"
+EXE="$APP/Contents/MacOS/$EXE_NAME"
+[[ -f "$EXE" ]] || { echo "[error] app executable not found: $EXE" >&2; exit 1; }
 
 # ---- assets -----------------------------------------------------------------
-cp -R "$ROOT/assets" "$APP/Contents/Resources/"
+mkdir -p "$APP/Contents/Resources"
+rm -rf "$APP/Contents/Resources/assets"
+rsync -a --exclude .DS_Store "$ROOT/assets/" "$APP/Contents/Resources/assets/"
+
+# ---- icns -------------------------------------------------------------------
+SRC="$ROOT/assets/AppIcon.appiconset"
+ICON_FILE="AppIcon.icns"
+ICON="$APP/Contents/Resources/$ICON_FILE"
+perl -e '
+use strict;
+use warnings;
+my ($src, $out) = @ARGV;
+my @entries = (
+    ["icp4", "monocurl-16.png"],
+    ["ic11", "monocurl-32.png"],
+    ["icp5", "monocurl-32.png"],
+    ["ic12", "monocurl-64.png"],
+    ["ic07", "monocurl-128.png"],
+    ["ic13", "monocurl-256.png"],
+    ["ic08", "monocurl-256.png"],
+    ["ic14", "monocurl-512.png"],
+    ["ic09", "monocurl-512.png"],
+    ["ic10", "monocurl-1024.png"],
+);
+my $payload = "";
+for my $entry (@entries) {
+    open my $fh, "<:raw", "$src/$entry->[1]" or die "open $entry->[1]: $!";
+    local $/;
+    my $data = <$fh>;
+    $payload .= $entry->[0] . pack("N", length($data) + 8) . $data;
+}
+open my $out_fh, ">:raw", $out or die "open $out: $!";
+print {$out_fh} "icns", pack("N", length($payload) + 8), $payload;
+' "$SRC" "$ICON"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIconFile $ICON_FILE" "$APP/Contents/Info.plist" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $ICON_FILE" "$APP/Contents/Info.plist"
 
 # ---- dylibs -----------------------------------------------------------------
 # Homebrew dylibs the binary links against (verified via otool -L).
@@ -75,7 +112,8 @@ fi
 mkdir -p "$ROOT/dist/macos"
 DMG="$ROOT/dist/macos/Monocurl-$VERSION.dmg"
 stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
-cp -R "$APP" "$stage/"; ln -s /Applications "$stage/Applications"
+ditto --noextattr --norsrc "$APP" "$stage/Monocurl.app"; ln -s /Applications "$stage/Applications"
+
 hdiutil create -volname Monocurl -srcfolder "$stage" -ov -format UDZO "$DMG"
 
 # ---- notarize ---------------------------------------------------------------
