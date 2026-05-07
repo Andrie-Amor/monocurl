@@ -24,7 +24,6 @@ pub enum ParameterValue {
     Float(f64),
     VectorFloat(Vec<f64>),
     Complex { re: f64, im: f64 },
-    Camera(CameraSnapshot),
     Other,
 }
 
@@ -34,7 +33,7 @@ impl ParameterValue {
             Self::Int(_) | Self::Float(_) | Self::Complex { .. } => true,
             Self::VectorInt(values) => values.len() == 2,
             Self::VectorFloat(values) => values.len() == 2,
-            Self::Camera(_) | Self::Other => false,
+            Self::Other => false,
         }
     }
 }

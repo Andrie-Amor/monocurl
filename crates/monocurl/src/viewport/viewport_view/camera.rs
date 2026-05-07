@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    f32::consts::{FRAC_PI_2, PI},
-};
+use std::f32::consts::{FRAC_PI_2, PI};
 
 use executor::{
     camera::{DEFAULT_CAMERA_FOV, MIN_CAMERA_NEAR},
@@ -9,8 +6,6 @@ use executor::{
 };
 use geo::simd::Float3;
 use gpui::*;
-
-use crate::services::{ParameterValue, PresentationUpdateTarget};
 
 use super::Viewport;
 
@@ -42,7 +37,6 @@ pub(super) struct PreviewCameraState {
 pub(super) struct PresentationCameraState {
     pub current: CameraSnapshot,
     pub reset_camera: CameraSnapshot,
-    pub pending_updates: VecDeque<CameraSnapshot>,
 }
 
 impl Viewport {
@@ -59,30 +53,14 @@ impl Viewport {
 
         if self.is_presenting {
             self.presentation_camera = match self.presentation_camera.take() {
-                Some(mut state) if cameras_close(&state.current, &scene_camera) => {
-                    state.pending_updates.clear();
-                    (!cameras_close(&state.reset_camera, &scene_camera)).then_some(
-                        PresentationCameraState {
-                            current: scene_camera,
-                            reset_camera: state.reset_camera,
-                            pending_updates: VecDeque::new(),
-                        },
-                    )
+                Some(state) if cameras_close(&state.current, &scene_camera) => {
+                    self.camera_drag = None;
+                    None
                 }
-                Some(mut state) => {
-                    if let Some(ack_index) = state
-                        .pending_updates
-                        .iter()
-                        .position(|pending| cameras_close(pending, &scene_camera))
-                    {
-                        state.pending_updates.drain(..=ack_index);
-                        Some(state)
-                    } else if cameras_close(&state.reset_camera, &scene_camera) {
-                        Some(state)
-                    } else {
-                        self.camera_drag = None;
-                        None
-                    }
+                Some(state) if cameras_close(&state.reset_camera, &scene_camera) => Some(state),
+                Some(_) => {
+                    self.camera_drag = None;
+                    None
                 }
                 None => {
                     self.camera_drag = None;
@@ -144,29 +122,17 @@ impl Viewport {
         cx.notify();
     }
 
-    pub(super) fn should_show_presentation_reset(&self, scene_camera: &CameraSnapshot) -> bool {
-        self.is_presenting
-            && self
-                .presentation_camera
-                .as_ref()
-                .is_some_and(|state| !cameras_close(&state.reset_camera, scene_camera))
+    pub(super) fn should_show_presentation_reset(&self) -> bool {
+        self.is_presenting && self.presentation_camera.is_some()
     }
 
     pub(super) fn reset_presentation_camera(&mut self, cx: &mut Context<Self>) {
-        let Some(state) = self.presentation_camera.clone() else {
-            return;
-        };
-        if cameras_close(&state.current, &state.reset_camera) {
+        if self.presentation_camera.is_none() {
             return;
         }
 
         self.bump_viewport_camera_version();
-        self.presentation_camera = Some(PresentationCameraState {
-            current: state.reset_camera.clone(),
-            reset_camera: state.reset_camera.clone(),
-            pending_updates: VecDeque::from([state.reset_camera.clone()]),
-        });
-        self.update_scene_camera_parameter(state.reset_camera, cx);
+        self.presentation_camera = None;
         cx.notify();
     }
 
@@ -202,24 +168,19 @@ impl Viewport {
         };
 
         if self.is_presenting {
-            let mut state =
-                self.presentation_camera
-                    .clone()
-                    .unwrap_or_else(|| PresentationCameraState {
-                        current: scene_camera.clone(),
-                        reset_camera: scene_camera.clone(),
-                        pending_updates: VecDeque::new(),
-                    });
-            state.current = next_camera.clone();
-            if state
-                .pending_updates
-                .back()
-                .is_none_or(|pending| !cameras_close(pending, &next_camera))
-            {
-                state.pending_updates.push_back(next_camera.clone());
+            let reset_camera = self
+                .presentation_camera
+                .as_ref()
+                .map(|state| state.reset_camera.clone())
+                .unwrap_or_else(|| scene_camera.clone());
+            if cameras_close(&next_camera, &reset_camera) {
+                self.presentation_camera = None;
+            } else {
+                self.presentation_camera = Some(PresentationCameraState {
+                    current: next_camera,
+                    reset_camera,
+                });
             }
-            self.presentation_camera = Some(state);
-            self.update_scene_camera_parameter(next_camera, cx);
         } else if cameras_close(&next_camera, &scene_camera) {
             self.preview_camera = None;
             self.copied_preview_camera = None;
@@ -250,25 +211,6 @@ impl Viewport {
         if self.camera_drag.take().is_some() {
             cx.notify();
         }
-    }
-
-    fn update_scene_camera_parameter(&mut self, camera: CameraSnapshot, cx: &mut Context<Self>) {
-        let target = self
-            .execution_state
-            .read(cx)
-            .parameters
-            .as_ref()
-            .and_then(|params| {
-                params
-                    .params
-                    .iter()
-                    .find(|param| param.name == "camera")
-                    .map(|param| param.target.clone())
-            })
-            .unwrap_or(PresentationUpdateTarget::Param { leader_index: 0 });
-        self.services.update(cx, |services, _| {
-            services.update_parameters(HashMap::from([(target, ParameterValue::Camera(camera))]))
-        });
     }
 }
 

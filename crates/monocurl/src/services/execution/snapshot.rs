@@ -1,5 +1,4 @@
 use executor::{
-    camera::camera_value_from_snapshot,
     error::RuntimeError,
     executor::Executor,
     heap::{VRc, with_heap},
@@ -36,7 +35,6 @@ impl ExecutionService {
                 values.iter().map(|&value| VRc::new(Value::Float(value))),
             )),
             ParameterValue::Complex { re, im } => Value::Complex { re: *re, im: *im },
-            ParameterValue::Camera(camera) => camera_value_from_snapshot(camera),
             ParameterValue::Other => return None,
         })
     }
