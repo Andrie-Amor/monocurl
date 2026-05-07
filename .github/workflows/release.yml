@@ -15,7 +15,6 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             artifact: macos-arm64
-          # Uncomment to also build for Intel Mac:
           # - target: x86_64-apple-darwin
           #   artifact: macos-x86_64
 
@@ -71,20 +70,122 @@ jobs:
         with:
           files: dist/macos/Monocurl-*.dmg
 
-  # Uncomment and fill in when ready to add other platforms:
-  #
-  # build-windows:
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - run: cargo bundle --package monocurl --release --target x86_64-pc-windows-msvc
-  #     - run: bash bundling/windows/post-bundle.sh ...
-  #
-  # build-linux:
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - run: cargo bundle --package monocurl --release --target x86_64-unknown-linux-gnu
-  #     - run: bash bundling/linux/post-bundle.sh ...
+  build-linux:
+    name: Linux (${{ matrix.target }})
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            artifact: linux-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libvulkan-dev \
+            libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev \
+            libfontconfig1-dev \
+            libssl-dev \
+            libicu-dev \
+            pkg-config \
+            fakeroot dpkg
+          cargo install cargo-bundle --locked
+
+      - name: Derive version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0-dev.$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bundle
+        run: cargo bundle --package monocurl --release --target ${{ matrix.target }}
+        env:
+          MONOCURL_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Post-bundle
+        run: bash bundling/linux/post-bundle.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Monocurl-${{ matrix.artifact }}
+          path: dist/linux/
+
+      - name: Upload to GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/linux/*
+
+  build-windows:
+    name: Windows (${{ matrix.target }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            artifact: windows-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install cargo-bundle
+        run: cargo install cargo-bundle --locked
+
+      - name: Derive version
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0-dev.$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bundle
+        run: cargo bundle --package monocurl --release --target ${{ matrix.target }}
+        env:
+          MONOCURL_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Post-bundle
+        shell: bash
+        run: bash bundling/windows/post-bundle.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
+        env:
+          CODESIGN_IDENTITY: ${{ secrets.WINDOWS_CODESIGN_IDENTITY }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Monocurl-${{ matrix.artifact }}
+          path: dist/windows/
+
+      - name: Upload to GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/windows/*

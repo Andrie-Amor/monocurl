@@ -15,7 +15,7 @@ set -euo pipefail
 
 VERSION="${1:?usage: $0 <version> <target>}"
 TARGET="${2:?usage: $0 <version> <target>}"
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APP="$ROOT/target/$TARGET/release/bundle/osx/Monocurl.app"
 EXE="$APP/Contents/MacOS/Monocurl"
 FWDIR="$APP/Contents/Frameworks"
