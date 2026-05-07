@@ -33,6 +33,8 @@ slide "hello"
 ## Building
 
 Monocurl is a Rust workspace. The GUI currently targets macOS, Windows, and Linux.
+See [BUILDING.md](BUILDING.md) for macOS, Linux, and Windows dependencies,
+`pkg-config` setup, and the recommended `.cargo/config.toml` environment.
 
 ```sh
 cargo build --package monocurl
