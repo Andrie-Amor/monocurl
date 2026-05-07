@@ -79,6 +79,7 @@ structs = { path = "crates/structs" }
 monocurl = { path = "crates/monocurl" }
 ui_cli_shared = { path = "crates/ui_cli_shared" }
 
+# TODO I'd rather vendor gpui than this
 [patch.crates-io]
 blade-graphics = { path = "vendor/blade-graphics-0.7.1" }
 
