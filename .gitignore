@@ -3,11 +3,11 @@
 .DS_Store
 target
 dist/
-bundling/**/__pycache__/
-bundling/**/*.pyc
 assets/bin/tectonic
 assets/bin/tectonic.exe
 assets/tectonic/bundle/
+*.pyc
+__pycache__/
 *.swp
 tmp
 .zed

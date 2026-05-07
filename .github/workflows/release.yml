@@ -54,7 +54,7 @@ jobs:
         run: bash bundling/post-bundle-macos.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
         env:
           CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
-          CODESIGN_ENTITLEMENTS: bundling/templates/macos/Monocurl.entitlements.in
+          CODESIGN_ENTITLEMENTS: bundling/Monocurl.entitlements
           APPLE_NOTARY_APPLE_ID: ${{ secrets.APPLE_NOTARY_APPLE_ID }}
           APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
           APPLE_NOTARY_TEAM_ID: ${{ secrets.APPLE_NOTARY_TEAM_ID }}
