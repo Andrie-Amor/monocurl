@@ -33,7 +33,7 @@ jobs:
       - name: Install build dependencies
         run: |
           brew install icu4c
-          pip3 install pillow
+          cargo install cargo-bundle --locked
           echo "PKG_CONFIG_PATH=$(brew --prefix icu4c)/lib/pkgconfig" >> $GITHUB_ENV
 
       - name: Derive version
@@ -45,13 +45,13 @@ jobs:
             echo "version=0.0.0-dev.$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build
-        run: cargo build --package monocurl --release --target ${{ matrix.target }}
+      - name: Bundle
+        run: cargo bundle --package monocurl --release --target ${{ matrix.target }}
         env:
           MONOCURL_VERSION: ${{ steps.version.outputs.version }}
 
-      - name: Bundle
-        run: bash bundling/bundle-macos.sh "${{ steps.version.outputs.version }}" "target/${{ matrix.target }}/release/monocurl"
+      - name: Post-bundle
+        run: bash bundling/post-bundle-macos.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
         env:
           CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
           CODESIGN_ENTITLEMENTS: bundling/templates/macos/Monocurl.entitlements.in
@@ -78,13 +78,13 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: dtolnay/rust-toolchain@stable
-  #     - run: cargo build --package monocurl --release --target x86_64-pc-windows-msvc
-  #     - run: bash bundling/bundle-windows.sh ...
+  #     - run: cargo bundle --package monocurl --release --target x86_64-pc-windows-msvc
+  #     - run: bash bundling/post-bundle-windows.sh ...
   #
   # build-linux:
   #   runs-on: ubuntu-22.04
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: dtolnay/rust-toolchain@stable
-  #     - run: cargo build --package monocurl --release --target x86_64-unknown-linux-gnu
-  #     - run: bash bundling/bundle-linux.sh ...
+  #     - run: cargo bundle --package monocurl --release --target x86_64-unknown-linux-gnu
+  #     - run: bash bundling/post-bundle-linux.sh ...

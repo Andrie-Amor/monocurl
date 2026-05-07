@@ -71,7 +71,7 @@ require_command() {
 
 make_macos_icon() {
   local app_dir="$1"
-  local icon_source="$APP_ICONSET_DIR/monocurl-1024-1024.png"
+  local icon_source="$APP_ICONSET_DIR/monocurl-1024.png"
   local icon_dest="$app_dir/Contents/Resources/$APP_ICON_FILE_BASENAME.icns"
 
   if [[ ! -d "$APP_ICONSET_DIR" ]]; then
@@ -99,7 +99,7 @@ make_macos_icon() {
 
 make_windows_icon() {
   local output_dir="$1"
-  local icon_source="$APP_ICONSET_DIR/monocurl-1024-1024.png"
+  local icon_source="$APP_ICONSET_DIR/monocurl-1024.png"
   local icon_dest="$output_dir/$APP_ICON_NAME.ico"
 
   if [[ ! -d "$APP_ICONSET_DIR" ]]; then

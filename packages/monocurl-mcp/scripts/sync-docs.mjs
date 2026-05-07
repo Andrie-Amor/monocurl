@@ -20,4 +20,4 @@ mkdirSync(assetDocs, { recursive: true });
 
 relink(resolve(assetDocs, "std"), "../../std/std", "dir");
 relink(resolve(packageRoot, "docs"), "../../assets/monocurl-mcp/docs", "dir");
-relink(resolve(packageRoot, "icon.png"), "../../assets/img/monocurl-1024.png", "file");
+relink(resolve(packageRoot, "icon.png"), "../../assets/img/monocurl.png", "file");

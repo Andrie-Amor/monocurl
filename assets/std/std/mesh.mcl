@@ -292,7 +292,7 @@ let HalfVector = |tail = [0, 0, 0], delta = 1r, normal = 1b|
 ## size: `[width, height]`
 ## [example]
 ## ```
-## mesh logo = Image("monocurl-1024.png", ORIGIN, [1.2, 1.2])
+## mesh logo = Image("monocurl.png", ORIGIN, [1.2, 1.2])
 ## ```
 let Image = |name, center = [0, 0, 0], size = [1, 1]| {
     var width = 0

@@ -33,7 +33,8 @@ help:
 
 package-macos:
 	$(call require-version)
-	bash bundle-macos.sh $(VERSION) ../target/aarch64-apple-darwin/release/monocurl
+	cargo bundle --package monocurl --release --target aarch64-apple-darwin
+	bash post-bundle-macos.sh $(VERSION) aarch64-apple-darwin
 
 package-windows:
 	@echo "[error] Windows bundling not yet implemented (bundle-windows.sh)" >&2
