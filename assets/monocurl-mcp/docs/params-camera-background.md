@@ -81,7 +81,8 @@ renderer meaning. They can be assigned and synchronized like other leaders, but
 `camera` controls the view and `background` controls scene color. Use
 `CameraLerp` for camera movement. Use `camera_transfer{original_camera,
 live_camera}` for meshes that should stay fixed relative to the frame while the
-camera moves.
+camera moves, and `orient_to_camera{camera}` for rotating meshes towards the camera.
+their center while turning to face the camera.
 
 With the default camera at `4b` and `16 / 9` frame, the `z = 0` authoring plane
 shows roughly `x = -4..4` and `y = -2.25..2.25`. Place most ordinary 2D content

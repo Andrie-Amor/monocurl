@@ -472,10 +472,13 @@ mod tests {
                 prev: -1,
                 next: -1,
                 inv: -1,
-                is_dom_sib: false,
+                is_dom_sib: true,
             }],
             tris: Vec::new(),
-            uniform: Uniforms::default(),
+            uniform: Uniforms {
+                stroke_radius: 24.0,
+                ..Uniforms::default()
+            },
             tag: Vec::new(),
             version: Mesh::fresh_version(),
         }
@@ -499,7 +502,7 @@ mod tests {
                     prev: -1,
                     next: first_next,
                     inv: -1,
-                    is_dom_sib: false,
+                    is_dom_sib: true,
                 },
                 Lin {
                     a: LinVertex {
@@ -514,11 +517,14 @@ mod tests {
                     prev: second_prev,
                     next: -1,
                     inv: -1,
-                    is_dom_sib: false,
+                    is_dom_sib: true,
                 },
             ],
             tris: Vec::new(),
-            uniform: Uniforms::default(),
+            uniform: Uniforms {
+                stroke_radius: 24.0,
+                ..Uniforms::default()
+            },
             tag: Vec::new(),
             version: Mesh::fresh_version(),
         }
@@ -541,7 +547,7 @@ mod tests {
                     prev: 2,
                     next: 1,
                     inv: -1,
-                    is_dom_sib: false,
+                    is_dom_sib: true,
                 },
                 Lin {
                     a: LinVertex {
@@ -556,7 +562,7 @@ mod tests {
                     prev: 0,
                     next: 2,
                     inv: -1,
-                    is_dom_sib: false,
+                    is_dom_sib: true,
                 },
                 Lin {
                     a: LinVertex {
@@ -571,7 +577,7 @@ mod tests {
                     prev: 1,
                     next: 0,
                     inv: -1,
-                    is_dom_sib: false,
+                    is_dom_sib: true,
                 },
             ],
             tris: vec![Tri {

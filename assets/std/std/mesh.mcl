@@ -1024,6 +1024,20 @@ let camera_transfer = operator |target, original_camera, live_camera, filter = n
     return [go(level: 0), go(level: 1)]
 }
 ## [overview]
+## Rotate a mesh tree so its local XY plane faces the camera.
+## [description]
+## Keeps the affected mesh tree's bounding-box center fixed, then interprets each vertex offset from that center in a camera-facing local basis. The local y axis follows the camera up direction projected perpendicular to the view direction, and the local x axis is chosen to preserve a right-handed local frame. Use this for labels, panels, and flat mesh trees that should turn toward the camera without changing their center.
+## [parameters]
+## camera: camera to face
+## [example]
+## ```
+## mesh label = orient_to_camera{$camera} center{[1, 0, 0]} Text("A")
+## ```
+let orient_to_camera = operator |target, camera, filter = nil| {
+    let go = |level| __monocurl__native__ op_orient_to_camera(target, camera, filter, level)
+    return [go(level: 0), go(level: 1)]
+}
+## [overview]
 ## Move a mesh near one side of the camera frame.
 ## [description]
 ## Placement is camera-aware, so `to_side{UP}` means the top of the rendered frame rather than global +y when a camera is supplied.

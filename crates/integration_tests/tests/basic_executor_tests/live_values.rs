@@ -1454,6 +1454,36 @@ fn test_camera_transfer_preserves_camera_space_under_orbit() {
 }
 
 #[test]
+fn test_orient_to_camera_preserves_center_and_remaps_xy_offsets() {
+    let r = run_with_stdlib(
+        "
+        let cam = Camera([10, 0, 0], [0, 0, 0], 1u)
+        let oriented = orient_to_camera{cam} Line([1, 2, 0], [3, 2, 0])
+        let c = mesh_center(oriented)
+        let back = mesh_direc(oriented, 1b)
+        let front = mesh_direc(oriented, 1f)
+        let result = [c[0], c[1], c[2], back[0], back[1], back[2], front[0], front[1], front[2]]
+    ",
+        &["mesh", "scene"],
+    );
+    r.assert_float_list_approx(&[2.0, 2.0, 0.0, 2.0, 2.0, 1.0, 2.0, 2.0, -1.0], 1e-5);
+}
+
+#[test]
+fn test_orient_to_camera_rotates_surface_normal_toward_camera() {
+    let r = run_with_stdlib(
+        "
+        let cam = Camera([10, 0, 0], [0, 0, 0], 1u)
+        let oriented = orient_to_camera{cam} Square(2)
+        let n = mesh_normal(oriented, 0.5)
+        let result = [n[0], n[1], n[2]]
+    ",
+        &["mesh", "scene"],
+    );
+    r.assert_float_list_approx(&[1.0, 0.0, 0.0], 1e-5);
+}
+
+#[test]
 fn test_capsule_accepts_scalar_and_equal_pair_radii() {
     let r = run_with_stdlib(
         "

@@ -45,7 +45,8 @@ import std.scene
 - Most primitive meshes are canonical and origin-based. Use `shift`/`center`
   for placement, and use `in_space{origin, x_unit, y_unit, z_unit}` when a mesh
   is authored in a local coordinate system such as graph axes and must be
-  embedded into the global scene.
+  embedded into the global scene. Use `orient_to_camera{camera}` for flat mesh
+  trees that should keep their center while facing the camera.
 - `mesh` and `param` declarations create leaders whose follower values can be
   animated. Pass references like `&title` to animations.
 - Animation helpers eventually lower to primitive animations such as `Wait`,

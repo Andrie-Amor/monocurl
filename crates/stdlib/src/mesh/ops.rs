@@ -200,6 +200,19 @@ fn remap_direction_between_cameras(
         + to.forward * direction.dot(from.forward)
 }
 
+fn camera_oriented_basis(camera: CameraBasis) -> (Float3, Float3, Float3) {
+    let z_unit = -camera.forward;
+    let y_projected = camera.up - z_unit * camera.up.dot(z_unit);
+    let y_hint = if y_projected.len_sq() > 1e-12 {
+        y_projected.normalize()
+    } else {
+        polygon_basis(z_unit).1
+    };
+    let x_unit = y_hint.cross(z_unit).normalize();
+    let y_unit = z_unit.cross(x_unit).normalize();
+    (x_unit, y_unit, z_unit)
+}
+
 fn filtered_tree_view<'a>(
     executor: &'a mut Executor,
     tree: &'a MeshTree,
@@ -696,6 +709,43 @@ pub async fn op_camera_transfer(
         }
         for lin in &mut mesh.lins {
             let target = remap_direction_between_cameras(lin.norm, original_camera, live_camera);
+            lin.norm = lin.norm.lerp(target, level);
+        }
+    })
+    .await?;
+    Ok(tree.into_value())
+}
+
+#[stdlib_func]
+pub async fn op_orient_to_camera(
+    executor: &mut Executor,
+    stack_idx: usize,
+) -> Result<Value, ExecutorError> {
+    let mut tree = read_mesh_tree_arg(executor, stack_idx, -4, "target").await?;
+    let level = read_level(executor, stack_idx, -1, "level")?;
+    if level <= 0.0 {
+        return Ok(tree.into_value());
+    }
+    let camera = parse_camera_arg(executor, stack_idx, -3, "camera")
+        .await?
+        .basis();
+    let filter = read_optional_tag_filter(executor, stack_idx, -2, "filter")?;
+    let Some(center) = affected_tree_center(executor, &tree, filter.as_ref()).await? else {
+        return Ok(tree.into_value());
+    };
+    let (x_unit, y_unit, z_unit) = camera_oriented_basis(camera);
+
+    tree.for_each_filtered(executor, filter.as_ref(), &mut |mesh| {
+        blend_mesh_positions(mesh, level, |point| {
+            let rel = point - center;
+            center + x_unit * rel.x + y_unit * rel.y + z_unit * rel.z
+        });
+        for dot in &mut mesh.dots {
+            let target = transform_hint_normal(dot.norm, x_unit, y_unit, z_unit);
+            dot.norm = dot.norm.lerp(target, level);
+        }
+        for lin in &mut mesh.lins {
+            let target = transform_hint_normal(lin.norm, x_unit, y_unit, z_unit);
             lin.norm = lin.norm.lerp(target, level);
         }
     })

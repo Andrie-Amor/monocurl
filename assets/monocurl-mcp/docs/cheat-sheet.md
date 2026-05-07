@@ -35,7 +35,8 @@ import std.scene
 ## Common Mesh Operators
 
 - Placement: `shift`, `center`, `scale`, `rotate`, `in_space`, `next_to`,
-  `matched_edge`, `to_side`, `to_corner`, `camera_transfer`, `projected`.
+  `matched_edge`, `to_side`, `to_corner`, `camera_transfer`,
+  `orient_to_camera`, `projected`.
 - Styling: `fill`, `stroke`, `color`, `fade`, `dotted`, `dashed`, `gloss`,
   `textured`, `z_index`.
 - Identity and subsets: `tag`, `text_tag`, `tag_filter`, `tag_split`,
