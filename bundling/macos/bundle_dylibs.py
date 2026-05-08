@@ -63,22 +63,12 @@ def should_bundle(path):
 def prepare_dylib(path):
     """Remove signature and normalize binary layout so install_name_tool can process it.
 
-    Some Homebrew dylibs (notably icu4c) have a LINKEDIT segment ordering that
-    install_name_tool rejects. Running lipo -thin forces a full binary rewrite
-    that fixes the layout regardless of the input state.
+    Some Homebrew dylibs (notably icu4c) have a LINKEDIT segment that Xcode 16.4's
+    install_name_tool rejects after signature removal. strip -S rewrites the binary
+    from scratch, producing a clean LINKEDIT regardless of fat/thin status.
     """
     subprocess.run(["codesign", "--remove-signature", path], capture_output=True)
-    try:
-        archs = subprocess.check_output(
-            ["lipo", "-archs", path], text=True, stderr=subprocess.DEVNULL
-        ).strip().split()
-        if archs:
-            subprocess.check_call(
-                ["lipo", path, "-thin", archs[0], "-output", path],
-                stderr=subprocess.DEVNULL,
-            )
-    except subprocess.CalledProcessError:
-        pass
+    subprocess.run(["strip", "-S", path], capture_output=True)
 
 
 def bundle(exe, frameworks_dir):
