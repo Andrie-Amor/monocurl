@@ -38,43 +38,8 @@ perl "$ROOT/bundling/macos/make_icns.pl" "$SRC" "$ICON"
     || /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $ICON_FILE" "$APP/Contents/Info.plist"
 
 # ---- dylibs -----------------------------------------------------------------
-# graphite2/freetype/libpng are pinned by soname; icu is discovered via otool
-# since its version number changes frequently with homebrew updates.
-rm -rf "$FWDIR" && mkdir -p "$FWDIR"
-
-SRCS=()
-FNAMES=()
-
-bundle_dylib() {
-    local src="$1"
-    local fname; fname="$(basename "$src")"
-    [[ -f "$src" ]] || { echo "[warn] dylib not found: $src" >&2; return; }
-    cp "$src" "$FWDIR/$fname" && chmod u+w "$FWDIR/$fname"
-    codesign --remove-signature "$FWDIR/$fname" 2>/dev/null || true
-    install_name_tool -id "@loader_path/$fname" "$FWDIR/$fname"
-    install_name_tool -change "$src" "@executable_path/../Frameworks/$fname" "$EXE" 2>/dev/null || true
-    SRCS+=("$src")
-    FNAMES+=("$fname")
-}
-
-bundle_dylib "$(brew --prefix graphite2)/lib/libgraphite2.3.dylib"
-bundle_dylib "$(brew --prefix freetype)/lib/libfreetype.6.dylib"
-bundle_dylib "$(brew --prefix libpng)/lib/libpng16.16.dylib"
-
-# icu version varies with homebrew; discover the exact sonames from the linked binary
-icu_dylib() { otool -L "$EXE" | awk 'NR>1{print $1}' | grep "$1" | head -1; }
-for _icu in libicudata libicuuc libicui18n; do
-    _src="$(icu_dylib "$_icu")"
-    [[ -n "$_src" ]] && bundle_dylib "$_src"
-done
-unset _icu _src
-
-# fix cross-references between bundled dylibs
-for dylib in "$FWDIR"/*.dylib; do
-    for i in "${!SRCS[@]}"; do
-        install_name_tool -change "${SRCS[$i]}" "@loader_path/${FNAMES[$i]}" "$dylib" 2>/dev/null || true
-    done
-done
+rm -rf "$FWDIR"
+python3 "$ROOT/bundling/macos/bundle_dylibs.py" "$EXE" "$FWDIR"
 
 # ---- sign -------------------------------------------------------------------
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
