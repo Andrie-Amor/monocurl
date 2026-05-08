@@ -60,6 +60,27 @@ def should_bundle(path):
     return os.path.isfile(path)
 
 
+def prepare_dylib(path):
+    """Remove signature and normalize binary layout so install_name_tool can process it.
+
+    Some Homebrew dylibs (notably icu4c) have a LINKEDIT segment ordering that
+    install_name_tool rejects. Running lipo -thin forces a full binary rewrite
+    that fixes the layout regardless of the input state.
+    """
+    subprocess.run(["codesign", "--remove-signature", path], capture_output=True)
+    try:
+        archs = subprocess.check_output(
+            ["lipo", "-archs", path], text=True, stderr=subprocess.DEVNULL
+        ).strip().split()
+        if archs:
+            subprocess.check_call(
+                ["lipo", path, "-thin", archs[0], "-output", path],
+                stderr=subprocess.DEVNULL,
+            )
+    except subprocess.CalledProcessError:
+        pass
+
+
 def bundle(exe, frameworks_dir):
     os.makedirs(frameworks_dir, exist_ok=True)
 
@@ -77,8 +98,7 @@ def bundle(exe, frameworks_dir):
             if not os.path.exists(dst):
                 shutil.copy2(resolved, dst)
                 os.chmod(dst, os.stat(dst).st_mode | 0o200)
-                subprocess.run(["codesign", "--remove-signature", dst],
-                               capture_output=True)
+                prepare_dylib(dst)
                 copied.append(dst)
                 queue.append(dst)
 
