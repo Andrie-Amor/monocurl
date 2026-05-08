@@ -68,7 +68,7 @@ main() {
 
             fetch "$release_api" > "$release_json"
             arch="${target%%-*}"
-            url="$(sed -n "s|.*\"browser_download_url\":[[:space:]]*\"\([^\"]*Monocurl-$arch\.tar\.gz\)\".*|\1|p" "$release_json" | head -n 1)"
+            url="$(sed -n "s|.*\"browser_download_url\":[[:space:]]*\"\([^\"]*Monocurl-linux-$arch\.tar\.gz\)\".*|\1|p" "$release_json" | head -n 1)"
             if [ -z "$url" ]; then
                 echo "Could not find a Monocurl Linux bundle for $target in release $version"
                 exit 1

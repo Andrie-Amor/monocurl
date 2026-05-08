@@ -70,6 +70,6 @@ else
     echo "[warn] patchelf not found; bundled Linux libraries may not be discovered at runtime" >&2
 fi
 
-TARBALL="$ROOT/dist/linux/Monocurl-${TARGET%%-*}.tar.gz"
+TARBALL="$ROOT/dist/linux/Monocurl-linux-${TARGET%%-*}.tar.gz"
 tar -czf "$TARBALL" -C "$stage" monocurl.app
 echo "[ok] $TARBALL"
