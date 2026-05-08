@@ -16,14 +16,10 @@ impl Assets {
             .and_then(|exe| exe.parent().map(Path::to_path_buf));
 
         if let Some(exe_dir) = exe_dir {
-            #[cfg(target_os = "macos")]
-            let candidate = exe_dir.join("..").join("Resources").join("assets");
-
-            #[cfg(not(target_os = "macos"))]
-            let candidate = exe_dir.join("assets");
-
-            if candidate.exists() {
-                return candidate;
+            for candidate in installed_asset_candidates(&exe_dir) {
+                if candidate.exists() {
+                    return candidate;
+                }
             }
         }
 
@@ -68,4 +64,22 @@ impl Assets {
         base.push(name.as_ref());
         base
     }
+}
+
+#[cfg(target_os = "macos")]
+fn installed_asset_candidates(exe_dir: &Path) -> Vec<PathBuf> {
+    vec![exe_dir.join("..").join("Resources").join("assets")]
+}
+
+#[cfg(not(target_os = "macos"))]
+fn installed_asset_candidates(exe_dir: &Path) -> Vec<PathBuf> {
+    let mut candidates = vec![exe_dir.join("assets")];
+
+    if exe_dir.file_name().is_some_and(|name| name == "bin")
+        && let Some(prefix) = exe_dir.parent()
+    {
+        candidates.push(prefix.join("assets"));
+    }
+
+    candidates
 }

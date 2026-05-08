@@ -22,6 +22,7 @@
     // We don't match on a reference, unless required.
     clippy::pattern_type_mismatch,
 )]
+#![allow(warnings)]
 
 pub use naga::{back::PipelineConstants, StorageAccess, VectorSize};
 pub type Transform = mint::RowMatrix3x4<f32>;

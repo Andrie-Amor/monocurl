@@ -167,7 +167,7 @@ impl HomeView {
                         .items_center()
                         .overflow_hidden()
                         .child(
-                            img(Assets::image("monocurl-1024.png"))
+                            img(Assets::image("monocurl.png"))
                                 .w(px(metrics.logo_size))
                                 .h(px(metrics.logo_size))
                                 .p(px(metrics.logo_padding)),

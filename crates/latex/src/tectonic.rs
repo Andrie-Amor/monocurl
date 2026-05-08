@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{Result, anyhow, bail};
 use hayro_interpret::{InterpreterSettings, Pdf};
+use structs::assets::Assets;
 use tectonic::{
     config::PersistentConfig,
     driver::{OutputFormat, ProcessingSessionBuilder},
@@ -195,7 +196,7 @@ fn load_default_index() -> Option<Arc<HashSet<String>>> {
     static DEFAULT_INDEX: OnceLock<Option<Arc<HashSet<String>>>> = OnceLock::new();
     DEFAULT_INDEX
         .get_or_init(|| {
-            let index_path = resource_path(&["tectonic", "default_bundle_v33.index"])?;
+            let index_path = asset_path(["tectonic", "default_bundle_v33.index"])?;
             let index = fs::read_to_string(index_path).ok()?;
             Some(Arc::new(
                 index
@@ -298,8 +299,8 @@ fn expand_glyph_uses(svg: &str) -> String {
 
 fn local_bundle_path() -> Option<PathBuf> {
     env_path("MONOCURL_TECTONIC_BUNDLE")
-        .or_else(|| resource_path(&["tectonic", "bundle"]))
-        .or_else(|| resource_path(&["tectonic", "bundle.zip"]))
+        .or_else(|| asset_path(["tectonic", "bundle"]))
+        .or_else(|| asset_path(["tectonic", "bundle.zip"]))
 }
 
 fn env_path(name: &str) -> Option<PathBuf> {
@@ -307,40 +308,12 @@ fn env_path(name: &str) -> Option<PathBuf> {
     path.exists().then_some(path)
 }
 
-fn resource_path(parts: &[&str]) -> Option<PathBuf> {
-    if let Some(path) = asset_dir_path(parts) {
-        return Some(path);
-    }
-
-    let exe_dir = env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(Path::to_path_buf));
-
-    if let Some(exe_dir) = exe_dir {
-        #[cfg(target_os = "macos")]
-        let mut candidate = exe_dir.join("..").join("Resources").join("assets");
-        #[cfg(not(target_os = "macos"))]
-        let mut candidate = exe_dir.join("assets");
-
-        for part in parts {
-            candidate.push(part);
-        }
-        if candidate.exists() {
-            return Some(candidate);
-        }
-    }
-
-    let mut candidate = PathBuf::from("assets");
+fn asset_path<const N: usize>(parts: [&str; N]) -> Option<PathBuf> {
+    let mut relative = PathBuf::new();
     for part in parts {
-        candidate.push(part);
+        relative.push(part);
     }
-    candidate.exists().then_some(candidate)
-}
 
-fn asset_dir_path(parts: &[&str]) -> Option<PathBuf> {
-    let mut candidate = PathBuf::from(env::var_os("MONOCURL_ASSETS_DIR")?);
-    for part in parts {
-        candidate.push(part);
-    }
+    let candidate = Assets::asset(relative);
     candidate.exists().then_some(candidate)
 }

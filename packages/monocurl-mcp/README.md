@@ -17,7 +17,7 @@ npm install
 npm test
 ```
 
-Recreate the package symlinks to the asset-backed docs and icon:
+Recreate the package symlinks to the shared stdlib sources and icon:
 
 ```sh
 npm run sync:docs

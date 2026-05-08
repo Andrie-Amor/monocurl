@@ -3,6 +3,21 @@ name = "monocurl"
 version = "0.1.0"
 edition.workspace = true
 
+[package.metadata.bundle]
+name = "Monocurl"
+identifier = "com.enigmadux.monocurl"
+icon = [
+    "assets/AppIcon.appiconset/monocurl-16.png",
+    "assets/AppIcon.appiconset/monocurl-32.png",
+    "assets/AppIcon.appiconset/monocurl-128.png",
+    "assets/AppIcon.appiconset/monocurl-256.png",
+    "assets/AppIcon.appiconset/monocurl-512.png",
+]
+resources = ["assets"]
+category = "public.app-category.education"
+short_description = "Mathematical animation editor"
+minimum_system_version = "11.0"
+
 [dependencies]
 cli.workspace = true
 ui_cli_shared.workspace = true

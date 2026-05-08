@@ -1,0 +1,13 @@
+Adwaita window action symbolic icons
+
+Source: https://gitlab.gnome.org/GNOME/adwaita-icon-theme
+Author: GNOME Project, Jakub Steiner
+License: LGPL-3.0-or-later and CC-BY-SA-3.0
+
+These files are adapted from the Adwaita window action symbolic icons:
+- window-close-symbolic.svg
+- window-maximize-symbolic.svg
+- window-minimize-symbolic.svg
+
+The fill color was changed to currentColor so GPUI can tint the icons with the
+active Monocurl theme.
