@@ -3921,6 +3921,7 @@ dependencies = [
  "libtess2",
  "roxmltree",
  "sha2",
+ "structs",
  "tectonic",
  "tectonic_bundles",
  "tectonic_engine_xetex",

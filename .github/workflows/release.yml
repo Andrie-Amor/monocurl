@@ -229,12 +229,6 @@ jobs:
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ matrix.target }}-
 
-      - name: Cache cargo-bundle
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-bundle.exe
-          key: cargo-bundle-${{ runner.os }}-0.10.0
-
       - name: Install build dependencies
         shell: pwsh
         run: |
@@ -272,11 +266,6 @@ jobs:
           "CXXFLAGS=/std:c++17" >> $env:GITHUB_ENV
           "CXXFLAGS_x86_64_pc_windows_msvc=/std:c++17" >> $env:GITHUB_ENV
 
-          if (-not (Get-Command cargo-bundle -ErrorAction SilentlyContinue)) {
-            cargo install cargo-bundle --locked --version 0.10.0
-          }
-          cargo bundle --version
-
       - name: Derive version
         id: version
         shell: bash
@@ -293,16 +282,14 @@ jobs:
         env:
           MONOCURL_VERSION: ${{ steps.version.outputs.version }}
 
-      - name: Bundle
-        run: cargo bundle --package monocurl --release --target ${{ matrix.target }}
+      - name: Build
+        run: cargo build --package monocurl --release --target ${{ matrix.target }}
         env:
           MONOCURL_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Post-bundle
-        shell: bash
-        run: bash bundling/windows/post-bundle.sh "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
-        env:
-          CODESIGN_IDENTITY: ${{ secrets.WINDOWS_CODESIGN_IDENTITY }}
+        shell: pwsh
+        run: ./bundling/windows/post-bundle.ps1 "${{ steps.version.outputs.version }}" "${{ matrix.target }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

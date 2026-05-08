@@ -73,10 +73,7 @@ fn installed_asset_candidates(exe_dir: &Path) -> Vec<PathBuf> {
 
 #[cfg(not(target_os = "macos"))]
 fn installed_asset_candidates(exe_dir: &Path) -> Vec<PathBuf> {
-    let mut candidates = vec![
-        exe_dir.join("assets"),
-        exe_dir.join("Resources").join("assets"),
-    ];
+    let mut candidates = vec![exe_dir.join("assets")];
 
     if exe_dir.file_name().is_some_and(|name| name == "bin")
         && let Some(prefix) = exe_dir.parent()
