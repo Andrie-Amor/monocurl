@@ -220,11 +220,10 @@ impl MonocurlLauncher {
     }
 
     fn launch() {
-        Self::clean_latex_file_cache();
-
         Application::new()
             .with_assets(MonocurlAssetSource)
             .run(|cx: &mut App| {
+                Self::clean_latex_file_cache();
                 Self::setup_fonts(cx);
                 ThemeSettings::init(cx);
                 UserSettings::init(cx);
