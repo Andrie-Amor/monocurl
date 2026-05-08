@@ -209,17 +209,6 @@ impl AutoCompleteState {
         }
     }
 
-    pub fn apply_selected(
-        this: &Rc<RefCell<Self>>,
-        editor: &mut TextEditor,
-        state: Entity<TextualState>,
-        window: &mut Window,
-        cx: &mut Context<TextEditor>,
-    ) {
-        let index = this.borrow().selected_index;
-        Self::apply_index(this, index, editor, state, window, cx);
-    }
-
     pub fn apply_index(
         this: &Rc<RefCell<Self>>,
         index: usize,
