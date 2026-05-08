@@ -709,7 +709,7 @@ mod test {
     fn test_warns_for_useless_expression_statement() {
         let result = compile_src("1 + 2");
         assert!(
-            has_warning(&result, "expression statement has no effect"),
+            has_warning(&result, "expression unused"),
             "expected useless-expression warning"
         );
     }
@@ -718,7 +718,7 @@ mod test {
     fn test_no_warning_for_expression_statement_with_assignment() {
         let result = compile_src("var x = 0\nx = 1");
         assert!(
-            !has_warning(&result, "expression statement has no effect"),
+            !has_warning(&result, "expression unused"),
             "did not expect useless-expression warning"
         );
     }
@@ -727,7 +727,7 @@ mod test {
     fn test_no_warning_for_expression_statement_with_lvalue_reference() {
         let result = compile_src("let poke = |slot| slot\npoke(&camera)");
         assert!(
-            !has_warning(&result, "expression statement has no effect"),
+            !has_warning(&result, "expression unused"),
             "did not expect useless-expression warning"
         );
     }
@@ -736,7 +736,7 @@ mod test {
     fn test_no_warning_for_print_statement() {
         let result = compile_src("print 1 + 2");
         assert!(
-            !has_warning(&result, "expression statement has no effect"),
+            !has_warning(&result, "expression unused"),
             "did not expect useless-expression warning"
         );
     }
