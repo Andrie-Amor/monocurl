@@ -203,6 +203,9 @@ impl MonocurlLauncher {
             }),
             window_bounds: Some(WindowBounds::Maximized(restore_bounds)),
             window_min_size: Some(size(px(520.), px(420.))),
+            #[cfg(target_os = "linux")]
+            // temporary linux csd preview
+            window_decorations: Some(WindowDecorations::Client),
             focus: true,
             ..Default::default()
         };
