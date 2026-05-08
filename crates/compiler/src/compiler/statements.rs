@@ -34,7 +34,7 @@ impl Compiler {
             Statement::Expression(e) => {
                 self.infer_possible_cursor_identifiers(span.clone());
                 if expression_statement_has_no_effect(e) {
-                    self.warning(span.clone(), "expression statement has no effect");
+                    self.warning(span.clone(), "expression unused");
                 }
                 self.compile_val(e, span);
                 self.emit_pops(1, span.clone());
