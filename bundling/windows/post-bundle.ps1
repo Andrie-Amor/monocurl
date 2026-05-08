@@ -24,7 +24,7 @@ if (-not (Test-Path $Assets)) {
 New-Item -ItemType Directory -Force $Dist | Out-Null
 
 $StageRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("monocurl-windows-" + [System.Guid]::NewGuid().ToString("N"))
-$AppName = "Monocurl-$Version-$Target"
+$AppName = "Monocurl-$($Target.Split('-')[0])-installer"
 $App = Join-Path $StageRoot $AppName
 $Zip = Join-Path $Dist "$AppName.zip"
 

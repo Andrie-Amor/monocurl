@@ -1048,10 +1048,10 @@ fn prepare_trans_mesh_pair_with_similar_topo_hint(
 
             Ok((prepared.0, prepared.1, Value::Nil))
         }
-        (Some(source), Some(target)) if mesh_has_content(source) => {
+        (Some(source), Some(_target)) if mesh_has_content(source) => {
             Ok((source.clone(), zero_alpha_mesh(source), Value::Nil))
         }
-        (Some(source), Some(target)) if mesh_has_content(target) => {
+        (Some(_source), Some(target)) if mesh_has_content(target) => {
             Ok((zero_alpha_mesh(target), target.clone(), Value::Nil))
         }
         (Some(source), Some(target)) => {

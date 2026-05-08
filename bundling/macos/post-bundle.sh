@@ -116,7 +116,7 @@ fi
 
 # ---- DMG --------------------------------------------------------------------
 mkdir -p "$ROOT/dist/macos"
-DMG="$ROOT/dist/macos/Monocurl-$VERSION-$TARGET.dmg"
+DMG="$ROOT/dist/macos/Monocurl-${TARGET%%-*}.dmg"
 stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
 ditto --noextattr --norsrc "$APP" "$stage/Monocurl.app"; ln -s /Applications "$stage/Applications"
 
