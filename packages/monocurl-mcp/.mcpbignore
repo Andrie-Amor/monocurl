@@ -7,3 +7,4 @@ server.json
 tsconfig.json
 dist/resources.js
 dist/resources.test.js
+docs/

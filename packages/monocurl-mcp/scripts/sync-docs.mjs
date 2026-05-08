@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,18 +6,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, "..");
 const repoRoot = resolve(packageRoot, "../..");
 
-const assetDocs = resolve(repoRoot, "assets/monocurl-mcp/docs");
-
 function relink(path, target, type) {
-  if (existsSync(path) || lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink()) {
+  const stat = lstatSync(path, { throwIfNoEntry: false });
+
+  if (stat?.isSymbolicLink()) {
+    unlinkSync(path);
+  } else if (existsSync(path)) {
     rmSync(path, { recursive: true, force: true });
   }
 
   symlinkSync(target, path, type);
 }
 
-mkdirSync(assetDocs, { recursive: true });
-
-relink(resolve(assetDocs, "std"), "../../std/std", "dir");
-relink(resolve(packageRoot, "docs"), "../../assets/monocurl-mcp/docs", "dir");
+mkdirSync(resolve(packageRoot, "docs"), { recursive: true });
+relink(resolve(packageRoot, "docs/std"), "../../../assets/std/std", "dir");
 relink(resolve(packageRoot, "icon.png"), "../../assets/img/monocurl.png", "file");
