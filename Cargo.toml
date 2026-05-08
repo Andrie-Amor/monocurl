@@ -84,3 +84,4 @@ blade-graphics = { path = "vendor/blade-graphics-0.7.1" }
 
 [profile.release]
 lto = true
+codegen-units = 1
