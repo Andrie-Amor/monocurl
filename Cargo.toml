@@ -58,7 +58,7 @@ tectonic_bundles = { version = "0.4.1", default-features = false }
 # layout 0.3.x conflicts with gpui's fontconfig stack.
 tectonic_engine_xetex = "=0.4.4"
 
-gpui = "0.2.2"
+gpui = { package = "gpui-ce", version = "0.3.3" }
 
 autocomplete = { path = "crates/autocomplete" }
 bytecode = { path = "crates/bytecode" }

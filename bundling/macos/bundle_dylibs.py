@@ -5,7 +5,6 @@
 # @executable_path/../Frameworks (for the exe) or @loader_path (for dylibs).
 
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -60,17 +59,6 @@ def should_bundle(path):
     return os.path.isfile(path)
 
 
-def prepare_dylib(path):
-    """Remove signature and normalize binary layout so install_name_tool can process it.
-
-    Some Homebrew dylibs (notably icu4c) have a LINKEDIT segment that Xcode 16.4's
-    install_name_tool rejects after signature removal. strip -S rewrites the binary
-    from scratch, producing a clean LINKEDIT regardless of fat/thin status.
-    """
-    subprocess.run(["codesign", "--remove-signature", path], capture_output=True)
-    subprocess.run(["strip", "-S", path], capture_output=True)
-
-
 def bundle(exe, frameworks_dir):
     os.makedirs(frameworks_dir, exist_ok=True)
 
@@ -82,30 +70,26 @@ def bundle(exe, frameworks_dir):
         is_dylib = cur.startswith(frameworks_dir + os.sep)
         for dep in otool_deps(cur, skip_id=is_dylib):
             resolved = resolve_dep(dep, cur, skip_id=is_dylib)
-            if not should_bundle(resolved):
+            if resolved is None or not should_bundle(resolved):
                 continue
             dst = os.path.join(frameworks_dir, os.path.basename(dep))
             if not os.path.exists(dst):
                 shutil.copy2(resolved, dst)
                 os.chmod(dst, os.stat(dst).st_mode | 0o200)
-                prepare_dylib(dst)
                 copied.append(dst)
                 queue.append(dst)
 
     def rewrite_refs(obj, ref_prefix, skip_id=False):
-        if skip_id:
-            subprocess.check_call([
-                "install_name_tool", "-id",
-                f"{ref_prefix}/{os.path.basename(obj)}", obj
-            ])
         for dep in otool_deps(obj, skip_id=skip_id):
-            if not should_bundle(dep):
+            resolved = resolve_dep(dep, obj, skip_id=skip_id)
+            if resolved is None or not should_bundle(resolved):
                 continue
             name = os.path.basename(dep)
-            if os.path.exists(os.path.join(frameworks_dir, name)):
+            new_dep = f"{ref_prefix}/{name}"
+            if dep != new_dep and os.path.exists(os.path.join(frameworks_dir, name)):
                 subprocess.check_call([
                     "install_name_tool", "-change", dep,
-                    f"{ref_prefix}/{name}", obj
+                    new_dep, obj
                 ])
 
     rewrite_refs(exe, "@executable_path/../Frameworks", skip_id=False)
