@@ -630,14 +630,14 @@ let ExplicitFunc2d = |f, x_min_max_samples = [-1, 1, 21], y_min_max_samples = [-
 }
 
 ## [overview]
-## Sample an implicit 2-D contour f(x, y) = 0.
+## Sample an implicit 2-D contour around f(x, y) <= 0.
 ## [description]
-## Uses a rectangular sampling grid and extracts zero contours as strokes; increase sample counts for sharper features.
+## Uses a padded rectangular sign grid and extracts the boundary of the non-positive region as linked stroke loops; increase sample counts for sharper features.
 ## [example]
 ## ```
 ## mesh level = stroke{CYAN} ImplicitFunc2d(|x, y| x * x + y * y - 1)
 ## ```
-let ImplicitFunc2d = |f, x_min_max_samples = [-1, 1, 41], y_min_max_samples = [-1, 1, 41]| {
+let ImplicitFunc2d = |f, x_min_max_samples = [-1, 1, 65], y_min_max_samples = [-1, 1, 65]| {
     var x_min = 0
     var x_max = 0
     var x_samples = 0
