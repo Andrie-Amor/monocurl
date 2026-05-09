@@ -11,7 +11,7 @@ mod test {
     use crate::{
         ast::*,
         import_context::ParseImportContext,
-        parser::{Diagnostic, Parser, PreparsedFile, SectionParser},
+        parser::{Diagnostic, Parser, PreparsedFile, RootSlideInfo, SectionParser},
     };
 
     fn lex(content: &str) -> Vec<(Token, Span8)> {
@@ -175,6 +175,37 @@ mod test {
         assert_eq!(sections[0].name, None);
         assert_eq!(sections[1].name, Some("Intro".to_string()));
         assert_eq!(sections[1].body.len(), 1);
+    }
+
+    #[test]
+    fn test_root_slide_info_is_emitted_from_root_split() {
+        let content = "let a = 1\nslide \"Intro\"\nlet b = 2\nslide \"Outro\"\nlet c = 3\n";
+        let (_bundle, artifacts) = Parser::parse_file(
+            &HashMap::new(),
+            PreparsedFile {
+                imports: vec![],
+                path: PathBuf::from("scene.mcs"),
+                text_rope: Rope::from_str(content),
+                root_import_span: None,
+                tokens: lex(content),
+                is_stdlib: false,
+            },
+            None,
+        );
+
+        assert_eq!(
+            artifacts.root_slides,
+            vec![
+                RootSlideInfo {
+                    keyword_span: 10..15,
+                    source_range: 10..34,
+                },
+                RootSlideInfo {
+                    keyword_span: 34..39,
+                    source_range: 34..content.len(),
+                },
+            ]
+        );
     }
 
     #[test]

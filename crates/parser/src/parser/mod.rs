@@ -325,6 +325,12 @@ pub struct Diagnostic {
     pub message: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RootSlideInfo {
+    pub keyword_span: Span8,
+    pub source_range: Span8,
+}
+
 pub struct SectionParser {
     precomputation: Precomputation,
     state: ShortTermState,
@@ -345,12 +351,14 @@ pub struct SectionParser {
 pub struct ParseArtifacts {
     pub error_diagnostics: Vec<Diagnostic>,
     pub cursor_possibilities: HashSet<Token>,
+    pub root_slides: Vec<RootSlideInfo>,
 }
 
 impl ParseArtifacts {
     fn extend(&mut self, other: ParseArtifacts) {
         self.error_diagnostics.extend(other.error_diagnostics);
         self.cursor_possibilities.extend(other.cursor_possibilities);
+        self.root_slides.extend(other.root_slides);
     }
 }
 
