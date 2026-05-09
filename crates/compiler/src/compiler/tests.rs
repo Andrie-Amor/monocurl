@@ -6,9 +6,9 @@ mod test {
     use lexer::lexer::Lexer;
     use lexer::token::Token;
     use parser::ast::{
-        BinaryOperator, BinaryOperatorType, Declaration, Expression, IdentifierDeclaration,
-        IdentifierReference, LambdaArg, LambdaBody, LambdaDefinition, Literal, Print, Section,
-        SectionBundle, SectionType, Statement, VariableType,
+        BinaryOperator, BinaryOperatorType, BindingPattern, Declaration, Expression,
+        IdentifierDeclaration, IdentifierReference, LambdaArg, LambdaBody, LambdaDefinition,
+        Literal, Print, Section, SectionBundle, SectionType, Statement, VariableType,
     };
     use stdlib::registry::registry;
     use structs::rope::Rope;
@@ -28,6 +28,12 @@ mod test {
 
     fn sb<T>(v: T) -> (Span8, Box<T>) {
         (empty_span(), Box::new(v))
+    }
+
+    fn id_pattern(name: &str) -> (Span8, BindingPattern) {
+        s(BindingPattern::Identifier(IdentifierDeclaration(
+            name.into(),
+        )))
     }
 
     fn make_bundle(
@@ -191,7 +197,7 @@ mod test {
     fn test_let_int_decl() {
         let stmts = vec![s(Statement::Declaration(Declaration {
             var_type: VariableType::Let,
-            identifier: s(IdentifierDeclaration("x".into())),
+            pattern: id_pattern("x"),
             value: s(Expression::Literal(Literal::Int(42))),
         }))];
         let result = compile_stmts(stmts);
@@ -209,7 +215,7 @@ mod test {
     fn test_nil_decl_emits_push_nil() {
         let stmts = vec![s(Statement::Declaration(Declaration {
             var_type: VariableType::Let,
-            identifier: s(IdentifierDeclaration("x".into())),
+            pattern: id_pattern("x"),
             value: s(Expression::Literal(Literal::Nil)),
         }))];
         let result = compile_stmts(stmts);
@@ -229,7 +235,7 @@ mod test {
         let stmts = vec![
             s(Statement::Declaration(Declaration {
                 var_type: VariableType::Let,
-                identifier: s(IdentifierDeclaration("x".into())),
+                pattern: id_pattern("x"),
                 value: s(Expression::Literal(Literal::Int(1))),
             })),
             s(Statement::Expression(Expression::BinaryOperator(
@@ -279,12 +285,12 @@ mod test {
         let stmts = vec![
             s(Statement::Declaration(Declaration {
                 var_type: VariableType::Let,
-                identifier: s(IdentifierDeclaration("x".into())),
+                pattern: id_pattern("x"),
                 value: s(Expression::Literal(Literal::Int(1))),
             })),
             s(Statement::Declaration(Declaration {
                 var_type: VariableType::Let,
-                identifier: s(IdentifierDeclaration("f".into())),
+                pattern: id_pattern("f"),
                 value: s(Expression::LambdaDefinition(LambdaDefinition {
                     args: vec![],
                     body: s(LambdaBody::Inline(Box::new(
@@ -405,7 +411,7 @@ mod test {
             sections: vec![Section {
                 body: vec![s(Statement::Declaration(Declaration {
                     var_type: VariableType::Let,
-                    identifier: s(IdentifierDeclaration("x".into())),
+                    pattern: id_pattern("x"),
                     value: s(Expression::Literal(Literal::Int(7))),
                 }))],
                 section_type: SectionType::UserLibrary,
@@ -441,7 +447,7 @@ mod test {
             sections: vec![Section {
                 body: vec![s(Statement::Declaration(Declaration {
                     var_type: VariableType::Var,
-                    identifier: s(IdentifierDeclaration("x".into())),
+                    pattern: id_pattern("x"),
                     value: s(Expression::Literal(Literal::Int(0))),
                 }))],
                 section_type: SectionType::UserLibrary,
@@ -748,7 +754,7 @@ mod test {
     fn test_bytecode_single_let_int() {
         let result = compile_stmts(vec![s(Statement::Declaration(Declaration {
             var_type: VariableType::Let,
-            identifier: s(IdentifierDeclaration("x".into())),
+            pattern: id_pattern("x"),
             value: s(Expression::Literal(Literal::Int(42))),
         }))]);
         no_errors(&result);
@@ -771,7 +777,7 @@ mod test {
     fn test_bytecode_single_let_nil() {
         let result = compile_stmts(vec![s(Statement::Declaration(Declaration {
             var_type: VariableType::Let,
-            identifier: s(IdentifierDeclaration("x".into())),
+            pattern: id_pattern("x"),
             value: s(Expression::Literal(Literal::Nil)),
         }))]);
         no_errors(&result);
@@ -794,7 +800,7 @@ mod test {
         let result = compile_stmts(vec![
             s(Statement::Declaration(Declaration {
                 var_type: VariableType::Var,
-                identifier: s(IdentifierDeclaration("x".into())),
+                pattern: id_pattern("x"),
                 value: s(Expression::Literal(Literal::Int(0))),
             })),
             s(Statement::Expression(Expression::BinaryOperator(
@@ -853,7 +859,7 @@ mod test {
     fn test_bytecode_simple_lambda() {
         let result = compile_stmts(vec![s(Statement::Declaration(Declaration {
             var_type: VariableType::Let,
-            identifier: s(IdentifierDeclaration("f".into())),
+            pattern: id_pattern("f"),
             value: s(Expression::LambdaDefinition(LambdaDefinition {
                 args: vec![LambdaArg {
                     identifier: s(IdentifierDeclaration("a".into())),
