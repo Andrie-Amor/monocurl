@@ -71,6 +71,25 @@ mod test {
         ret
     }
 
+    fn id_pattern(span: Span8, name: &str) -> SpanTagged<BindingPattern> {
+        (
+            span,
+            BindingPattern::Identifier(IdentifierDeclaration(name.to_string())),
+        )
+    }
+
+    fn pattern_identifier_name(pattern: &SpanTagged<BindingPattern>) -> &str {
+        let BindingPattern::Identifier(identifier) = &pattern.1 else {
+            panic!("expected identifier binding pattern");
+        };
+        &identifier.0
+    }
+
+    fn binding_identifier_name(pattern: &SpanTagged<IdentifierDeclaration>) -> &str {
+        let identifier = &pattern.1;
+        &identifier.0
+    }
+
     fn parse_root_test(content: &str) -> (Vec<Section>, Vec<Diagnostic>) {
         let (bundle, artifacts) = Parser::parse_file(
             &HashMap::new(),
@@ -999,7 +1018,7 @@ mod test {
         let result = parse_stmt_test("let x = 5").unwrap();
         let expected = Statement::Declaration(Declaration {
             var_type: VariableType::Let,
-            identifier: (4..5, IdentifierDeclaration("x".to_string())),
+            pattern: id_pattern(4..5, "x"),
             value: (8..9, Expression::Literal(Literal::Int(5))),
         });
         assert_eq!(result.1, expected);
@@ -1010,10 +1029,82 @@ mod test {
         let result = parse_stmt_test("var y = 10").unwrap();
         let expected = Statement::Declaration(Declaration {
             var_type: VariableType::Var,
-            identifier: (4..5, IdentifierDeclaration("y".to_string())),
+            pattern: id_pattern(4..5, "y"),
             value: (8..10, Expression::Literal(Literal::Int(10))),
         });
         assert_eq!(result.1, expected);
+    }
+
+    #[test]
+    fn test_destructuring_let_declaration() {
+        let result = parse_stmt_test("let [a, b, c] = value").unwrap();
+        let expected = Statement::Declaration(Declaration {
+            var_type: VariableType::Let,
+            pattern: (
+                4..13,
+                BindingPattern::List(vec![
+                    (5..6, IdentifierDeclaration("a".to_string())),
+                    (8..9, IdentifierDeclaration("b".to_string())),
+                    (11..12, IdentifierDeclaration("c".to_string())),
+                ]),
+            ),
+            value: (
+                16..21,
+                Expression::IdentifierReference(IdentifierReference::Value("value".to_string())),
+            ),
+        });
+        assert_eq!(result.1, expected);
+    }
+
+    #[test]
+    fn test_nested_binding_pattern_emits_specific_error() {
+        let lexed = lex("let [a, [b, c]] = value");
+        let text_rope = Rope::from_str("let [a, [b, c]] = value");
+        let mut parser = SectionParser::new(lexed, text_rope, SectionType::Slide, None, None);
+        let _ = parser.parse_statement();
+        assert!(
+            parser
+                .artifacts
+                .error_diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.message
+                    == "nested destructuring patterns are not supported"),
+            "expected nested destructuring diagnostic, got {:?}",
+            parser.artifacts.error_diagnostics
+        );
+    }
+
+    #[test]
+    fn test_destructuring_for_loop() {
+        let result = parse_stmt_test("for ([index, value] in container) { print value }").unwrap();
+        let Statement::For(for_stmt) = result.1 else {
+            panic!("expected for statement");
+        };
+        assert!(matches!(
+            for_stmt.pattern.1,
+            BindingPattern::List(ref elements)
+                if binding_identifier_name(&elements[0]) == "index"
+                    && binding_identifier_name(&elements[1]) == "value"
+        ));
+    }
+
+    #[test]
+    fn test_mesh_and_param_destructuring_emit_specific_error() {
+        for src in ["mesh [a, b] = []", "param [a, b] = []"] {
+            let lexed = lex(src);
+            let text_rope = Rope::from_str(src);
+            let mut parser = SectionParser::new(lexed, text_rope, SectionType::Slide, None, None);
+            let _ = parser.parse_statement();
+            assert!(
+                parser.artifacts.error_diagnostics.iter().any(|diagnostic| {
+                    diagnostic
+                        .message
+                        .contains("cannot destructure initialize a mesh or parameter")
+                }),
+                "expected destructuring diagnostic for {src:?}, got {:?}",
+                parser.artifacts.error_diagnostics
+            );
+        }
     }
 
     #[test]
@@ -1069,7 +1160,7 @@ mod test {
     fn test_for_loop() {
         let result = parse_stmt_test("for (i in [1, 2, 3]) { print i }").unwrap();
         let expected = Statement::For(For {
-            var_name: (5..6, IdentifierDeclaration("i".to_string())),
+            pattern: id_pattern(5..6, "i"),
             container: (
                 10..19,
                 Expression::Literal(Literal::List(vec![
@@ -1475,7 +1566,7 @@ mod test {
                     8..17,
                     Statement::Declaration(Declaration {
                         var_type: VariableType::Let,
-                        identifier: (12..13, IdentifierDeclaration("x".to_string())),
+                        pattern: id_pattern(12..13, "x"),
                         value: (16..17, Expression::Literal(Literal::Int(5))),
                     }),
                 ),
@@ -1573,7 +1664,7 @@ mod test {
         let Statement::Declaration(decl) = result.1 else {
             panic!("expected declaration");
         };
-        assert_eq!(decl.identifier.1.0, "x");
+        assert_eq!(pattern_identifier_name(&decl.pattern), "x");
         assert!(matches!(decl.value.1, Expression::OperatorInvocation(_)));
     }
 
@@ -1635,7 +1726,7 @@ mod test {
         let Statement::Declaration(decl) = result.1 else {
             panic!("expected declaration");
         };
-        assert_eq!(decl.identifier.1.0, "x");
+        assert_eq!(pattern_identifier_name(&decl.pattern), "x");
         assert!(matches!(decl.value.1, Expression::Literal(Literal::Int(1))));
     }
 
@@ -1649,7 +1740,7 @@ mod test {
         let Statement::Declaration(decl) = result.1 else {
             panic!("expected declaration");
         };
-        assert_eq!(decl.identifier.1.0, "x");
+        assert_eq!(pattern_identifier_name(&decl.pattern), "x");
         assert!(matches!(decl.value.1, Expression::OperatorInvocation(_)));
     }
 
@@ -1771,7 +1862,7 @@ mod test {
                     body: vec![(
                         11..47,
                         Statement::For(For {
-                            var_name: (16..17, IdentifierDeclaration("i".to_string())),
+                            pattern: id_pattern(16..17, "i"),
                             container: (
                                 21..30,
                                 Expression::Literal(Literal::List(vec![
